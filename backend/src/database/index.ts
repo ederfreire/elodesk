@@ -87,6 +87,7 @@ import CourseLesson from "../models/CourseLesson";
 import CourseCompany from "../models/CourseCompany";
 import CourseComment from "../models/CourseComment";
 import AppointmentService from "../models/AppointmentService";
+import AppointmentServiceProfessional from "../models/AppointmentServiceProfessional";
 import AppointmentBooking from "../models/AppointmentBooking";
 
 
@@ -107,6 +108,7 @@ const models = [
   CourseCompany,
   CourseComment,
   AppointmentService,
+  AppointmentServiceProfessional,
   AppointmentBooking,
   User,
   Contact,

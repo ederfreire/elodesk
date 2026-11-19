@@ -6,6 +6,9 @@ import {
   DialogContent,
   DialogTitle,
   CircularProgress,
+  Checkbox,
+  FormGroup,
+  FormHelperText,
   Grid,
   IconButton,
   Paper,
@@ -101,7 +104,8 @@ const EMPTY_FORM = {
   description: "",
   durationMinutes: 30,
   price: "",
-  active: true
+  active: true,
+  professionalIds: []
 };
 
 const statusLabel = {
@@ -114,11 +118,13 @@ const statusLabel = {
 const Appointments = () => {
   const { user } = useContext(AuthContext);
   const [services, setServices] = useState([]);
+  const [professionals, setProfessionals] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [calendarBookings, setCalendarBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [bookingsLoading, setBookingsLoading] = useState(false);
   const [servicesLoading, setServicesLoading] = useState(true);
+  const [professionalsLoading, setProfessionalsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("calendar");
   const [calendarDate, setCalendarDate] = useState(() =>
     toCalendarDisplayDate(new Date(), user?.company?.timezone || "America/Sao_Paulo")
@@ -141,6 +147,17 @@ const Appointments = () => {
       toastError(error);
     } finally {
       setServicesLoading(false);
+    }
+  }, []);
+
+  const loadProfessionals = useCallback(async () => {
+    try {
+      const { data } = await api.get("/appointment-professionals");
+      setProfessionals(Array.isArray(data) ? data : []);
+    } catch (error) {
+      toastError(error);
+    } finally {
+      setProfessionalsLoading(false);
     }
   }, []);
 
@@ -176,7 +193,8 @@ const Appointments = () => {
   useEffect(() => {
     moment.locale(({ pt: "pt-br", en: "en", es: "es", ar: "ar", tr: "tr" })[i18n.language] || "pt-br");
     loadServices();
-  }, [loadServices]);
+    loadProfessionals();
+  }, [loadServices, loadProfessionals]);
 
   useEffect(() => {
     loadCalendarBookings();
@@ -228,7 +246,10 @@ const Appointments = () => {
       description: service.description || "",
       durationMinutes: service.durationMinutes || 30,
       price: service.price ?? "",
-      active: service.active !== false
+      active: service.active !== false,
+      professionalIds: Array.isArray(service.professionalIds)
+        ? service.professionalIds.map(Number)
+        : []
     });
     setDialogOpen(true);
   };
@@ -240,7 +261,8 @@ const Appointments = () => {
         ...form,
         durationMinutes: Number(form.durationMinutes),
         price: form.price === "" ? null : Number(form.price),
-        active: form.active
+        active: form.active,
+        professionalIds: form.professionalIds
       };
       if (selectedService) {
         await api.put(`/appointment-services/${selectedService.id}`, payload);
@@ -346,7 +368,7 @@ const Appointments = () => {
             <Grid item>
               <Typography variant="h6">Serviços</Typography>
               <Typography variant="body2" color="textSecondary">
-                Serviços ativos aparecem automaticamente no fluxo do WhatsApp.
+                Serviços ativos e associados a pelo menos um profissional aparecem no fluxo do WhatsApp.
               </Typography>
             </Grid>
             <Grid item>
@@ -364,6 +386,7 @@ const Appointments = () => {
             <TableHead>
               <TableRow>
                 <TableCell>Serviço</TableCell>
+                <TableCell>Profissionais</TableCell>
                 <TableCell>Duração</TableCell>
                 <TableCell>Preço</TableCell>
                 <TableCell>Status</TableCell>
@@ -380,6 +403,12 @@ const Appointments = () => {
                         {service.description}
                       </Typography>
                     )}
+                  </TableCell>
+                  <TableCell>
+                    {(service.professionalIds || [])
+                      .map(id => professionals.find(professional => professional.id === id)?.name)
+                      .filter(Boolean)
+                      .join(", ") || "Nenhum associado"}
                   </TableCell>
                   <TableCell>{service.durationMinutes} min</TableCell>
                   <TableCell>
@@ -406,7 +435,7 @@ const Appointments = () => {
               ))}
               {!servicesLoading && services.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} align="center">
+                  <TableCell colSpan={6} align="center">
                     Cadastre o primeiro serviço para habilitar o agendamento pelo WhatsApp.
                   </TableCell>
                 </TableRow>
@@ -552,6 +581,46 @@ const Appointments = () => {
             value={form.description}
             onChange={event => setForm(current => ({ ...current, description: event.target.value }))}
           />
+          <Typography variant="subtitle1" style={{ marginTop: 16 }}>
+            Profissionais que realizam este serviço
+          </Typography>
+          {professionalsLoading ? (
+            <FormHelperText>Carregando usuários...</FormHelperText>
+          ) : professionals.length === 0 ? (
+            <FormHelperText>
+              Nenhum usuário cadastrado. Cadastre usuários para associá-los ao serviço.
+            </FormHelperText>
+          ) : (
+            <>
+              <FormGroup>
+                {professionals.map(professional => (
+                  <FormControlLabel
+                    key={professional.id}
+                    control={
+                      <Checkbox
+                        color="primary"
+                        checked={form.professionalIds.includes(professional.id)}
+                        onChange={event =>
+                          setForm(current => ({
+                            ...current,
+                            professionalIds: event.target.checked
+                              ? Array.from(new Set([...current.professionalIds, professional.id]))
+                              : current.professionalIds.filter(id => id !== professional.id)
+                          }))
+                        }
+                      />
+                    }
+                    label={professional.name}
+                  />
+                ))}
+              </FormGroup>
+              {form.professionalIds.length === 0 && (
+                <FormHelperText error>
+                  Sem profissionais associados, este serviço não aparecerá no fluxo do WhatsApp.
+                </FormHelperText>
+              )}
+            </>
+          )}
           <Grid container spacing={2}>
             <Grid item xs={6}>
               <TextField

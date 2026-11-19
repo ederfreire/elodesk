@@ -1,7 +1,9 @@
 import { Request, Response } from "express";
-import { Op } from "sequelize";
+import { Op, Transaction } from "sequelize";
+import sequelize from "../database";
 import AppointmentBooking from "../models/AppointmentBooking";
 import AppointmentService from "../models/AppointmentService";
+import AppointmentServiceProfessional from "../models/AppointmentServiceProfessional";
 import Contact from "../models/Contact";
 import User from "../models/User";
 import AppError from "../errors/AppError";
@@ -11,21 +13,96 @@ import {
   updateBookingStatus
 } from "../services/AppointmentService/BookingService";
 
+interface AppointmentServiceResponse extends Record<string, unknown> {
+  professionalIds: number[];
+}
+
+const parseProfessionalIds = (value: unknown): number[] => {
+  if (!Array.isArray(value)) {
+    throw new AppError("ERR_APPOINTMENT_PROFESSIONALS_INVALID", 400);
+  }
+  const ids = value.map(Number);
+  if (ids.some(id => !Number.isInteger(id) || id <= 0)) {
+    throw new AppError("ERR_APPOINTMENT_PROFESSIONALS_INVALID", 400);
+  }
+  return Array.from(new Set(ids));
+};
+
+const validateProfessionalIds = async (
+  professionalIds: number[],
+  companyId: number
+): Promise<void> => {
+  if (professionalIds.length === 0) return;
+  const users = await User.findAll({
+    where: { companyId, id: professionalIds },
+    attributes: ["id"]
+  });
+  if (users.length !== professionalIds.length) {
+    throw new AppError("ERR_APPOINTMENT_PROFESSIONALS_INVALID", 400);
+  }
+};
+
+const replaceServiceProfessionals = async (
+  serviceId: number,
+  professionalIds: number[],
+  transaction: Transaction
+): Promise<void> => {
+  await AppointmentServiceProfessional.destroy({
+    where: { serviceId },
+    transaction
+  });
+  if (professionalIds.length > 0) {
+    await AppointmentServiceProfessional.bulkCreate(
+      professionalIds.map(professionalId => ({ serviceId, professionalId })),
+      { transaction }
+    );
+  }
+};
+
+const addProfessionalIds = async (
+  serviceRows: AppointmentService[]
+): Promise<AppointmentServiceResponse[]> => {
+  if (serviceRows.length === 0) return [];
+  const assignments = await AppointmentServiceProfessional.findAll({
+    where: { serviceId: serviceRows.map(service => service.id) },
+    attributes: ["serviceId", "professionalId"]
+  });
+  const idsByService = new Map<number, number[]>();
+  assignments.forEach(assignment => {
+    const ids = idsByService.get(assignment.serviceId) || [];
+    ids.push(assignment.professionalId);
+    idsByService.set(assignment.serviceId, ids);
+  });
+  return serviceRows.map(service => ({
+    ...service.toJSON(),
+    professionalIds: idsByService.get(service.id) || []
+  }));
+};
+
 export const services = async (req: Request, res: Response): Promise<Response> => {
   const { companyId } = req.user;
   const rows = await AppointmentService.findAll({
     where: { companyId },
     order: [["active", "DESC"], ["name", "ASC"]]
   });
-  return res.json(rows);
+  return res.json(await addProfessionalIds(rows));
 };
 
 export const createService = async (req: Request, res: Response): Promise<Response> => {
   const { companyId } = req.user;
-  const { name, description, durationMinutes, price, active } = req.body || {};
+  const {
+    name,
+    description,
+    durationMinutes,
+    price,
+    active,
+    professionalIds = []
+  } = req.body || {};
   if (active !== undefined && typeof active !== "boolean") {
     throw new AppError("ERR_APPOINTMENT_SERVICE_ACTIVE_INVALID", 400);
   }
+  const parsedProfessionalIds = parseProfessionalIds(professionalIds);
+  await validateProfessionalIds(parsedProfessionalIds, companyId);
   const duration = Number(durationMinutes);
 
   if (!String(name || "").trim()) throw new AppError("ERR_APPOINTMENT_SERVICE_NAME_REQUIRED", 400);
@@ -36,15 +113,22 @@ export const createService = async (req: Request, res: Response): Promise<Respon
   if (parsedPrice !== null && (!Number.isFinite(parsedPrice) || parsedPrice < 0)) {
     throw new AppError("ERR_APPOINTMENT_SERVICE_PRICE_INVALID", 400);
   }
-  const service = await AppointmentService.create({
-    companyId,
-    name: String(name).trim(),
-    description: description ? String(description).trim() : "",
-    durationMinutes: duration,
-    price: parsedPrice,
-    active: active !== false
+  const service = await sequelize.transaction(async transaction => {
+    const created = await AppointmentService.create({
+      companyId,
+      name: String(name).trim(),
+      description: description ? String(description).trim() : "",
+      durationMinutes: duration,
+      price: parsedPrice,
+      active: active !== false
+    }, { transaction });
+    await replaceServiceProfessionals(created.id, parsedProfessionalIds, transaction);
+    return created;
   });
-  return res.status(201).json(service);
+  return res.status(201).json({
+    ...service.toJSON(),
+    professionalIds: parsedProfessionalIds
+  });
 };
 
 export const updateService = async (req: Request, res: Response): Promise<Response> => {
@@ -54,7 +138,14 @@ export const updateService = async (req: Request, res: Response): Promise<Respon
   });
   if (!service) throw new AppError("ERR_APPOINTMENT_SERVICE_NOT_FOUND", 404);
 
-  const { name, description, durationMinutes, price, active } = req.body || {};
+  const { name, description, durationMinutes, price, active, professionalIds } = req.body || {};
+  const hasProfessionalIds = Object.prototype.hasOwnProperty.call(req.body || {}, "professionalIds");
+  const parsedProfessionalIds = hasProfessionalIds
+    ? parseProfessionalIds(professionalIds)
+    : undefined;
+  if (parsedProfessionalIds) {
+    await validateProfessionalIds(parsedProfessionalIds, companyId);
+  }
   const updates: Partial<AppointmentService> = {};
   if (name !== undefined) {
     if (!String(name).trim()) throw new AppError("ERR_APPOINTMENT_SERVICE_NAME_REQUIRED", 400);
@@ -80,8 +171,15 @@ export const updateService = async (req: Request, res: Response): Promise<Respon
     updates.active = active;
   }
 
-  await service.update(updates);
-  return res.json(service);
+  await sequelize.transaction(async transaction => {
+    if (Object.keys(updates).length > 0) {
+      await service.update(updates, { transaction });
+    }
+    if (parsedProfessionalIds) {
+      await replaceServiceProfessionals(service.id, parsedProfessionalIds, transaction);
+    }
+  });
+  return res.json((await addProfessionalIds([service]))[0]);
 };
 
 export const removeService = async (req: Request, res: Response): Promise<Response> => {

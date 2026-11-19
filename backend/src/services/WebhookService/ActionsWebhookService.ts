@@ -82,12 +82,14 @@ import { scheduleFlowWaitTimer, cancelFlowWaitTimer } from "./FlowWaitTimerServi
 import mimeTypes from "mime-types";
 import { SendWacallsMediaMessage } from "../WacallsServices/SendWacallsMessageService";
 import AppointmentService from "../../models/AppointmentService";
+import AppointmentServiceProfessional from "../../models/AppointmentServiceProfessional";
 import User from "../../models/User";
 import Company from "../../models/Company";
 import {
   createBooking,
   listAvailableSlots
 } from "../AppointmentService/BookingService";
+import getAppointmentBookingMessage from "../AppointmentService/BookingMessages";
 
 // Nós de mídia do FlowBuilder (imagem/áudio/vídeo/documento/application) e o
 // PIX de boleto usam SendWhatsAppMediaFlow (Baileys-only) — sem um branch
@@ -2707,6 +2709,13 @@ export const ActionsWebhookService = async (
             );
           }
         };
+        const configuredMessages = nodeSelected.data?.messages || {};
+        const getBookingMessage = (
+          key: string,
+          fallback: string,
+          variables: Record<string, string> = {}
+        ) =>
+          getAppointmentBookingMessage(configuredMessages, key, fallback, variables);
         const persistWait = async (state: any) => {
           await ticket.update({
             status: "pending",
@@ -2722,10 +2731,22 @@ export const ActionsWebhookService = async (
             }
           });
         };
-        const serviceRows = await AppointmentService.findAll({
+        const allServiceRows = await AppointmentService.findAll({
           where: { companyId, active: true },
           order: [["name", "ASC"]]
         });
+        const serviceAssignments = allServiceRows.length
+          ? await AppointmentServiceProfessional.findAll({
+              where: { serviceId: allServiceRows.map(service => service.id) },
+              attributes: ["serviceId", "professionalId"]
+            })
+          : [];
+        const assignedServiceIds = new Set(
+          serviceAssignments.map(assignment => assignment.serviceId)
+        );
+        const serviceRows = allServiceRows.filter(service =>
+          assignedServiceIds.has(service.id)
+        );
         const optionsText = (options: Array<{ name: string; detail?: string }>) =>
           options.map((option, index) =>
             `${index + 1}. ${option.name}${option.detail ? ` — ${option.detail}` : ""}`
@@ -2740,12 +2761,14 @@ export const ActionsWebhookService = async (
 
         const showStep = async (nextState: any) => {
           if (nextState.step === "service") {
-            const services = await AppointmentService.findAll({
-              where: { companyId, active: true },
-              order: [["name", "ASC"]]
-            });
+            const services = serviceRows;
             if (services.length === 0) {
-              await sendBookingText("Ainda não há serviços disponíveis para agendamento. Peça à equipe para cadastrar os serviços.");
+              await sendBookingText(
+                getBookingMessage(
+                  "noServices",
+                  "Ainda não há serviços disponíveis para agendamento. Peça à equipe para cadastrar os serviços e associar profissionais."
+                )
+              );
               await ticket.update({
                 flowWebhook: false,
                 lastFlowId: null,
@@ -2760,19 +2783,33 @@ export const ActionsWebhookService = async (
               name: service.name,
               detail: `${service.durationMinutes} min${service.price ? ` · R$ ${Number(service.price).toFixed(2)}` : ""}`
             }));
-            await sendBookingText(`Qual serviço deseja agendar?\n${optionsText(nextState.options)}\n\nDigite *cancelar* para sair.`);
+            await sendBookingText(
+              `${getBookingMessage("servicePrompt", "Qual serviço deseja agendar?")}\n${optionsText(nextState.options)}\n\nDigite *cancelar* para sair.`
+            );
           } else if (nextState.step === "professional") {
-            const professionals = await User.findAll({
-              where: { companyId },
-              attributes: ["id", "name"],
-              order: [["name", "ASC"]]
+            const assignments = await AppointmentServiceProfessional.findAll({
+              where: { serviceId: Number(nextState.service.id) },
+              attributes: ["professionalId"]
             });
+            const professionalIds = assignments.map(assignment => assignment.professionalId);
+            const professionals = professionalIds.length
+              ? await User.findAll({
+                  where: { companyId, id: professionalIds },
+                  attributes: ["id", "name"],
+                  order: [["name", "ASC"]]
+                })
+              : [];
             nextState.options = professionals.map(person => ({
               id: person.id,
               name: person.name
             }));
             if (professionals.length === 0) {
-              await sendBookingText("Não há profissionais cadastrados para receber agendamentos.");
+              await sendBookingText(
+                getBookingMessage(
+                  "noProfessionals",
+                  "Não há profissionais habilitados para este serviço."
+                )
+              );
               await ticket.update({
                 flowWebhook: false,
                 lastFlowId: null,
@@ -2782,7 +2819,9 @@ export const ActionsWebhookService = async (
               });
               return false;
             }
-            await sendBookingText(`Com quem deseja agendar?\n${optionsText(nextState.options)}\n\nDigite *cancelar* para sair.`);
+            await sendBookingText(
+              `${getBookingMessage("professionalPrompt", "Com quem deseja agendar?")}\n${optionsText(nextState.options)}\n\nDigite *cancelar* para sair.`
+            );
           } else if (nextState.step === "slot") {
             let slots;
             try {
@@ -2795,7 +2834,12 @@ export const ActionsWebhookService = async (
               });
             } catch (error: any) {
               logger.error(`[APPOINTMENTS] Falha ao consultar horários: ${error?.message || error}`);
-              await sendBookingText("Não consegui consultar os horários agora. Tente novamente mais tarde ou fale com a equipe.");
+              await sendBookingText(
+                getBookingMessage(
+                  "slotLookupError",
+                  "Não consegui consultar os horários agora. Tente novamente mais tarde ou fale com a equipe."
+                )
+              );
               await ticket.update({
                 flowWebhook: false,
                 lastFlowId: null,
@@ -2811,14 +2855,29 @@ export const ActionsWebhookService = async (
               name: slot.label
             }));
             if (slots.length === 0) {
-              await sendBookingText("Não encontrei horários disponíveis para esse profissional nas próximas duas semanas. Escolha outro profissional.");
+              await sendBookingText(
+                getBookingMessage(
+                  "noSlots",
+                  "Não encontrei horários disponíveis para esse profissional nas próximas duas semanas. Escolha outro profissional."
+                )
+              );
               nextState.step = "professional";
               return showStep(nextState);
             }
-            await sendBookingText(`Escolha um horário:\n${optionsText(nextState.options)}\n\nDigite *cancelar* para sair.`);
+            await sendBookingText(
+              `${getBookingMessage("slotPrompt", "Escolha um horário:")}\n${optionsText(nextState.options)}\n\nDigite *cancelar* para sair.`
+            );
           } else if (nextState.step === "confirm") {
             await sendBookingText(
-              `Confirme sua reserva:\n*Serviço:* ${nextState.service.name}\n*Profissional:* ${nextState.professional.name}\n*Horário:* ${nextState.slot.name}\n\nResponda *1* para confirmar ou *2* para cancelar.`
+              getBookingMessage(
+                "confirmationPrompt",
+                "Confirme sua reserva:\n*Serviço:* {{service}}\n*Profissional:* {{professional}}\n*Horário:* {{when}}\n\nResponda *1* para confirmar ou *2* para cancelar.",
+                {
+                  service: nextState.service.name,
+                  professional: nextState.professional.name,
+                  when: nextState.slot.name
+                }
+              )
             );
           }
 
@@ -2827,7 +2886,12 @@ export const ActionsWebhookService = async (
         };
 
         if (reply.toLowerCase() === "cancelar") {
-          await sendBookingText("Agendamento cancelado. Se precisar, é só chamar novamente.");
+          await sendBookingText(
+            getBookingMessage(
+              "bookingCancelled",
+              "Agendamento cancelado. Se precisar, é só chamar novamente."
+            )
+          );
           await ticket.update({
             dataWebhook: {
               ...(ticket.dataWebhook as any || {}),
@@ -2899,9 +2963,16 @@ export const ActionsWebhookService = async (
             const syncWarning = result.googleSyncError
               ? "\n\nA reserva foi salva, mas não foi possível sincronizar com o Google Agenda."
               : "";
-            await sendBookingText(
-              `Agendamento confirmado! ✅\n*Serviço:* ${state.service.name}\n*Profissional:* ${state.professional.name}\n*Data e hora:* ${when}${syncWarning}`
+            const confirmationMessage = getBookingMessage(
+              "bookingConfirmed",
+              "Agendamento confirmado! ✅\n*Serviço:* {{service}}\n*Profissional:* {{professional}}\n*Data e hora:* {{when}}",
+              {
+                service: state.service.name,
+                professional: state.professional.name,
+                when
+              }
             );
+            await sendBookingText(`${confirmationMessage}${syncWarning}`);
             await ticket.update({
               dataWebhook: {
                 ...(ticket.dataWebhook as any || {}),
@@ -2915,7 +2986,12 @@ export const ActionsWebhookService = async (
             continue;
           } catch (error: any) {
             if (error?.message === "ERR_APPOINTMENT_SLOT_UNAVAILABLE") {
-              await sendBookingText("Esse horário acabou de ser reservado. Vou mostrar os horários atualizados.");
+              await sendBookingText(
+                getBookingMessage(
+                  "slotUnavailable",
+                  "Esse horário acabou de ser reservado. Vou mostrar os horários atualizados."
+                )
+              );
               state.step = "slot";
               await showStep(state);
               return "waiting_input";
@@ -2923,7 +2999,10 @@ export const ActionsWebhookService = async (
 
             logger.error(`[APPOINTMENTS] Falha ao confirmar a reserva: ${error?.message || error}`);
             await sendBookingText(
-              "Não consegui verificar o resultado da reserva. Confirme com a equipe antes de tentar novamente."
+              getBookingMessage(
+                "bookingFailure",
+                "Não consegui verificar o resultado da reserva. Confirme com a equipe antes de tentar novamente."
+              )
             );
             await ticket.update({
               flowWebhook: false,
@@ -2937,7 +3016,9 @@ export const ActionsWebhookService = async (
         }
 
         if (state.step === "confirm" && ["2", "nao", "não"].includes(reply.toLowerCase())) {
-          await sendBookingText("Agendamento não confirmado.");
+          await sendBookingText(
+            getBookingMessage("bookingNotConfirmed", "Agendamento não confirmado.")
+          );
           await ticket.update({
             dataWebhook: {
               ...(ticket.dataWebhook as any || {}),
@@ -2951,7 +3032,9 @@ export const ActionsWebhookService = async (
           continue;
         }
 
-        await sendBookingText("Resposta inválida. Vou repetir as opções.");
+        await sendBookingText(
+          getBookingMessage("invalidReply", "Resposta inválida. Vou repetir as opções.")
+        );
         await showStep(state);
         return "waiting_input";
       }

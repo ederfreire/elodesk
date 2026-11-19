@@ -47,7 +47,7 @@ export default memo(({ isConnectable, id }) => {
         <strong>Agendamento de serviços</strong>
       </div>
       <div style={{ marginTop: 6, fontSize: 11, color: "#5a5a5a", maxWidth: 220 }}>
-        O cliente escolhe serviço, profissional e horário pelo WhatsApp.
+        Duplo clique para personalizar as mensagens de cada etapa.
       </div>
       <Handle
         type="source"

@@ -4,6 +4,7 @@ import "moment/locale/pt-br";
 import { google } from "googleapis";
 import AppointmentBooking from "../../models/AppointmentBooking";
 import AppointmentService from "../../models/AppointmentService";
+import AppointmentServiceProfessional from "../../models/AppointmentServiceProfessional";
 import Company from "../../models/Company";
 import Contact from "../../models/Contact";
 import GoogleCalendarIntegration from "../../models/GoogleCalendarIntegration";
@@ -126,6 +127,12 @@ export const listAvailableSlots = async ({
   if (!service) throw new AppError("ERR_APPOINTMENT_SERVICE_NOT_FOUND", 404);
   if (!professional) throw new AppError("ERR_APPOINTMENT_PROFESSIONAL_NOT_FOUND", 404);
   if (!company) throw new AppError("ERR_COMPANY_NOT_FOUND", 404);
+  const serviceProfessional = await AppointmentServiceProfessional.findOne({
+    where: { serviceId, professionalId }
+  });
+  if (!serviceProfessional) {
+    throw new AppError("ERR_APPOINTMENT_PROFESSIONAL_NOT_ASSIGNED", 400);
+  }
 
   const timezone = company.timezone || "America/Sao_Paulo";
   const from = date

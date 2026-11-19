@@ -99,6 +99,7 @@ import instagramSendDmNode from "./nodes/instagramSendDmNode";
 import instagramRewardPdfNode from "./nodes/instagramRewardPdfNode";
 import googleCalendarNode from "./nodes/googleCalendarNode";
 import appointmentBookingNode from "./nodes/appointmentBookingNode";
+import AppointmentBookingConfigModal from "./AppointmentBookingConfigModal";
 import waitInputNode from "./nodes/waitInputNode";
 import exitNode from "./nodes/exitNode";
 import FlowBuilderGoogleCalendarModal from "../../components/FlowBuilderGoogleCalendarModal";
@@ -992,6 +993,7 @@ export const FlowBuilderConfig = () => {
   const [modalAddGoogleCalendar, setModalAddGoogleCalendar] = useState(null);
   const [modalAddWaitInput, setModalAddWaitInput] = useState(null);
   const [modalAddExit, setModalAddExit] = useState(null);
+  const [modalAddAppointmentBooking, setModalAddAppointmentBooking] = useState(null);
   const [n8nLogsDrawerOpen, setN8nLogsDrawerOpen] = useState(false);
 
   // Estados ReactFlow (mantidos)
@@ -1461,7 +1463,7 @@ export const FlowBuilderConfig = () => {
         {
           id: geraStringAleatoria(30),
           position: { x: posX, y: posY },
-          data: { label: "Agendamento de serviços" },
+          data: { label: "Agendamento de serviços", ...(data || {}) },
           type: "appointmentBooking",
         },
       ]);
@@ -1822,6 +1824,7 @@ export const FlowBuilderConfig = () => {
     if (node.type === "attendant") setModalAddAttendant("edit");
     if (node.type === "waitInput") setModalAddWaitInput("edit");
     if (node.type === "exit") setModalAddExit("edit");
+    if (node.type === "appointmentBooking") setModalAddAppointmentBooking("edit");
     if (node.type === "httpRequest") {
       if (node.data.saveVariables && node.data.saveVariables.length > 0) {
         if (
@@ -1932,6 +1935,7 @@ export const FlowBuilderConfig = () => {
     setModalAddAttendant(null);
     setModalAddWaitInput(null);
     setModalAddExit(null);
+    setModalAddAppointmentBooking(null);
     setModalAddInput(null);
     setModalAddConditionCompare(null);
     setModalAddAiAgent(null);
@@ -2037,7 +2041,8 @@ export const FlowBuilderConfig = () => {
         addNode("asaasBoleto");
         break;
       case "appointmentBooking":
-        addNode("appointmentBooking");
+        setDataNode(null);
+        setModalAddAppointmentBooking("create");
         break;
       case "img":
         setModalAddImg("create");
@@ -2519,6 +2524,13 @@ export const FlowBuilderConfig = () => {
         data={dataNode}
         onUpdate={updateNode}
         close={setModalAddGoogleCalendar}
+      />
+      <AppointmentBookingConfigModal
+        open={modalAddAppointmentBooking}
+        onSave={data => addNode("appointmentBooking", data)}
+        data={dataNode}
+        onUpdate={updateNode}
+        close={setModalAddAppointmentBooking}
       />
       <N8nLogsDrawer
         open={n8nLogsDrawerOpen}
