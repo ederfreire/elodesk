@@ -1351,6 +1351,7 @@ menu_ferramentas() {
     printf "   [${BLUE}7${WHITE}] Instalar troncal SIP (baresip) — ligar/receber por linha SIP no discador\n"
     printf "   [${BLUE}8${WHITE}] Remover troncal SIP (baresip)\n"
     printf "   [${BLUE}9${WHITE}] Verificar e reconstruir o que estiver desatualizado\n"
+    printf "   [${BLUE}10${WHITE}] Atualizar aplicação sem reinstalar o servidor\n"
     printf "   [${BLUE}0${WHITE}] Voltar ao Menu Principal\n"
     echo
     read -p "> " option_tools
@@ -1431,6 +1432,11 @@ menu_ferramentas() {
       # quando se quer ter CERTEZA de que o que está rodando é o código atual.
       detectar_instalacao || true
       verificar_artefatos_build || true
+      echo
+      read -p "Pressione Enter para voltar..." _
+      ;;
+    10)
+      atualizar_aplicacao_incremental
       echo
       read -p "Pressione Enter para voltar..." _
       ;;
@@ -3623,6 +3629,149 @@ _idade_artefato() {
   else
     echo "AUSENTE"
   fi
+}
+
+atualizar_aplicacao_incremental() {
+  carregar_variaveis
+  detectar_instalacao || return 1
+
+  local app_dir="/home/deploy/${empresa}"
+  local instalador_dir
+  local source_mode=""
+  local backend_deps_changed=0
+  local frontend_deps_changed=0
+  local previous_commit=""
+  local dependency_file
+  local changed_files
+
+  instalador_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+  if su - deploy -c "git -C '${app_dir}' rev-parse --is-inside-work-tree" >/dev/null 2>&1; then
+    source_mode="git"
+    local git_status
+    git_status=$(su - deploy -c "git -C '${app_dir}' status --porcelain") || {
+      printf "${RED} >> Não foi possível verificar o estado do repositório da instalação.${WHITE}\n"
+      return 1
+    }
+    if [ -n "${git_status}" ]; then
+      printf "${RED} >> Atualização cancelada: há alterações locais em ${app_dir}.${WHITE}\n"
+      printf "${YELLOW} >> Salve ou descarte essas alterações antes de atualizar.${WHITE}\n"
+      return 1
+    fi
+  elif [ -d "${instalador_dir}/backend" ] && [ -d "${instalador_dir}/frontend" ]; then
+    source_mode="local"
+    for dependency_file in package.json package-lock.json; do
+      if [ -f "${instalador_dir}/backend/${dependency_file}" ] && \
+        ! cmp -s "${instalador_dir}/backend/${dependency_file}" "${app_dir}/backend/${dependency_file}"; then
+        backend_deps_changed=1
+      fi
+      if [ -f "${instalador_dir}/frontend/${dependency_file}" ] && \
+        ! cmp -s "${instalador_dir}/frontend/${dependency_file}" "${app_dir}/frontend/${dependency_file}"; then
+        frontend_deps_changed=1
+      fi
+    done
+  else
+    printf "${RED} >> Não encontrei um checkout Git na instalação nem as pastas backend/frontend junto ao instalador.${WHITE}\n"
+    return 1
+  fi
+
+  banner
+  printf "${WHITE} >> Atualização incremental da instalação: ${CYAN}${app_dir}${WHITE}\n"
+  if [ "${source_mode}" = "git" ]; then
+    printf "${WHITE} >> Código: atualização do branch configurado no Git.${WHITE}\n"
+  else
+    printf "${WHITE} >> Código: arquivos backend/frontend junto ao instalador.${WHITE}\n"
+  fi
+  printf "${YELLOW} >> O instalador não atualizará pacotes do sistema nem outros serviços.${WHITE}\n"
+  echo
+  read -p "Deseja continuar? (S/N): " confirmacao_atualizacao
+  confirmacao_atualizacao=$(echo "${confirmacao_atualizacao}" | tr '[:lower:]' '[:upper:]')
+  if [ "${confirmacao_atualizacao}" != "S" ]; then
+    printf "${YELLOW} >> Atualização cancelada.${WHITE}\n"
+    return 0
+  fi
+
+  backup_app_atualizar || {
+    printf "${RED} >> Não foi possível preparar a atualização.${WHITE}\n"
+    return 1
+  }
+
+  if [ "${source_mode}" = "git" ]; then
+    previous_commit=$(su - deploy -c "git -C '${app_dir}' rev-parse HEAD") || return 1
+    if ! su - deploy -c "git -C '${app_dir}' pull --ff-only"; then
+      printf "${RED} >> Falha ao atualizar o código pelo Git. Nenhum processo foi reiniciado.${WHITE}\n"
+      return 1
+    fi
+    changed_files=$(su - deploy -c "git -C '${app_dir}' diff --name-only '${previous_commit}' HEAD") || {
+      printf "${RED} >> Não foi possível verificar os arquivos atualizados pelo Git.${WHITE}\n"
+      return 1
+    }
+    case "${changed_files}" in
+      *backend/package.json*|*backend/package-lock.json*) backend_deps_changed=1 ;;
+    esac
+    case "${changed_files}" in
+      *frontend/package.json*|*frontend/package-lock.json*) frontend_deps_changed=1 ;;
+    esac
+  else
+    if ! command -v rsync >/dev/null 2>&1; then
+      printf "${RED} >> rsync não está instalado; não foi possível copiar o código.${WHITE}\n"
+      return 1
+    fi
+    rsync -a --chown=deploy:deploy --exclude='.git' --exclude='node_modules' \
+      --exclude='.env' --exclude='dist' --exclude='public' \
+      "${instalador_dir}/backend/" "${app_dir}/backend/" || return 1
+    rsync -a --chown=deploy:deploy --exclude='.git' --exclude='node_modules' \
+      --exclude='.env' --exclude='build' \
+      "${instalador_dir}/frontend/" "${app_dir}/frontend/" || return 1
+    if [ -f "${instalador_dir}/backend/public/webchat.js" ]; then
+      mkdir -p "${app_dir}/backend/public"
+      cp -f "${instalador_dir}/backend/public/webchat.js" "${app_dir}/backend/public/webchat.js" || return 1
+      chown deploy:deploy "${app_dir}/backend/public/webchat.js" || return 1
+    fi
+  fi
+
+  local node_path="export PATH=/usr/local/n/versions/node/20.19.4/bin:/usr/bin:/usr/local/bin:\$PATH"
+  if [ "${backend_deps_changed}" -eq 1 ]; then
+    printf "${WHITE} >> Dependências do backend alteradas; instalando dependências...${WHITE}\n"
+    if ! su - deploy -c "set -e; ${node_path}; cd '${app_dir}/backend'; PUPPETEER_SKIP_DOWNLOAD=true npm install --no-audit --no-fund --include=dev --legacy-peer-deps"; then
+      printf "${RED} >> Instalação das dependências do backend falhou.${WHITE}\n"
+      return 1
+    fi
+  fi
+  if [ "${frontend_deps_changed}" -eq 1 ]; then
+    printf "${WHITE} >> Dependências do frontend alteradas; instalando dependências...${WHITE}\n"
+    if ! su - deploy -c "set -e; ${node_path}; cd '${app_dir}/frontend'; npm install --no-audit --no-fund --legacy-peer-deps"; then
+      printf "${RED} >> Instalação das dependências do frontend falhou.${WHITE}\n"
+      return 1
+    fi
+  fi
+
+  printf "${WHITE} >> Compilando backend...${WHITE}\n"
+  if ! su - deploy -c "set -e; ${node_path}; cd '${app_dir}/backend'; npm run build"; then
+    printf "${RED} >> Build do backend falhou; migrações e reinícios não foram executados.${WHITE}\n"
+    return 1
+  fi
+
+  printf "${WHITE} >> Compilando frontend...${WHITE}\n"
+  if ! su - deploy -c "set -e; ${node_path}; cd '${app_dir}/frontend'; NODE_OPTIONS='--max-old-space-size=4096 --openssl-legacy-provider' npm run build"; then
+    printf "${RED} >> Build do frontend falhou; migrações e reinícios não foram executados.${WHITE}\n"
+    return 1
+  fi
+
+  printf "${WHITE} >> Aplicando migrações do banco...${WHITE}\n"
+  if ! su - deploy -c "set -e; ${node_path}; cd '${app_dir}/backend'; npx sequelize db:migrate"; then
+    printf "${RED} >> Migrações falharam; os processos não foram reiniciados.${WHITE}\n"
+    return 1
+  fi
+
+  printf "${WHITE} >> Reiniciando somente backend e frontend da instalação...${WHITE}\n"
+  if ! su - deploy -c "set -e; ${node_path}; pm2 restart '${empresa}-backend' --update-env; pm2 restart '${empresa}-frontend' --update-env"; then
+    printf "${RED} >> Falha ao reiniciar os processos da aplicação. Verifique o estado no PM2.${WHITE}\n"
+    return 1
+  fi
+
+  printf "${GREEN} >> Atualização incremental concluída com sucesso.${WHITE}\n"
+  return 0
 }
 
 verificar_artefatos_build() {
