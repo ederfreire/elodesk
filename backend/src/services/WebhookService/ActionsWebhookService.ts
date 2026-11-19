@@ -90,6 +90,7 @@ import {
   listAvailableSlots
 } from "../AppointmentService/BookingService";
 import getAppointmentBookingMessage from "../AppointmentService/BookingMessages";
+import { formatCompanyCurrency, getCompanyCurrency } from "../../helpers/GetCompanyCurrency";
 
 // Nós de mídia do FlowBuilder (imagem/áudio/vídeo/documento/application) e o
 // PIX de boleto usam SendWhatsAppMediaFlow (Baileys-only) — sem um branch
@@ -2731,6 +2732,7 @@ export const ActionsWebhookService = async (
             }
           });
         };
+        const currency = await getCompanyCurrency(companyId);
         const allServiceRows = await AppointmentService.findAll({
           where: { companyId, active: true },
           order: [["name", "ASC"]]
@@ -2778,11 +2780,16 @@ export const ActionsWebhookService = async (
               });
               return false;
             }
-            nextState.options = services.map(service => ({
-              id: service.id,
-              name: service.name,
-              detail: `${service.durationMinutes} min${service.price ? ` · R$ ${Number(service.price).toFixed(2)}` : ""}`
-            }));
+            nextState.options = services.map(service => {
+              const priceDetail = service.price === null || service.price === undefined
+                ? ""
+                : ` · ${formatCompanyCurrency(Number(service.price), currency)}`;
+              return {
+                id: service.id,
+                name: service.name,
+                detail: `${service.durationMinutes} min${priceDetail}`
+              };
+            });
             await sendBookingText(
               `${getBookingMessage("servicePrompt", "Qual serviço deseja agendar?")}\n${optionsText(nextState.options)}\n\nDigite *cancelar* para sair.`
             );

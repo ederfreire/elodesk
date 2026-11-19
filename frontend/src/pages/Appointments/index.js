@@ -43,6 +43,8 @@ import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { i18n } from "../../translate/i18n";
+import { formatCurrency, getCurrencySymbol } from "../../helpers/currencyHelper";
+import useCompanyCurrency from "../../hooks/useCompanyCurrency";
 import "./Appointments.css";
 
 const localizer = momentLocalizer(moment);
@@ -117,6 +119,7 @@ const statusLabel = {
 
 const Appointments = () => {
   const { user } = useContext(AuthContext);
+  const { currencyReady, currency } = useCompanyCurrency(user?.companyId);
   const [services, setServices] = useState([]);
   const [professionals, setProfessionals] = useState([]);
   const [bookings, setBookings] = useState([]);
@@ -414,7 +417,9 @@ const Appointments = () => {
                   <TableCell>
                     {service.price === null || service.price === ""
                       ? "—"
-                      : `R$ ${Number(service.price).toFixed(2)}`}
+                      : currencyReady
+                        ? formatCurrency(Number(service.price), currency || "BRL")
+                        : "..."}
                   </TableCell>
                   <TableCell>{service.active ? "Ativo" : "Inativo"}</TableCell>
                   <TableCell align="right">
@@ -650,7 +655,11 @@ const Appointments = () => {
             <Grid item xs={6}>
               <TextField
                 margin="dense"
-                label="Preço (R$)"
+                label={
+                  currencyReady
+                    ? `Preço (${getCurrencySymbol(currency || "BRL")})`
+                    : "Preço"
+                }
                 type="number"
                 fullWidth
                 inputProps={{ min: 0, step: "0.01" }}
