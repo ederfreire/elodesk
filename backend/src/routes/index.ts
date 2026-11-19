@@ -83,7 +83,6 @@ import utmLinkRoutes from "./utmLinkRoutes";
 import salesAgentRoutes from "./salesAgentRoutes";
 import agentTemplateRoutes from "./agentTemplateRoutes";
 import courseRoutes from "./courseRoutes";
-import appointmentRoutes from "./appointmentRoutes";
 
 const routes = Router();
 
@@ -93,7 +92,6 @@ routes.use(utmLinkRoutes);
 routes.use(salesAgentRoutes);
 routes.use(agentTemplateRoutes);
 routes.use(courseRoutes);
-routes.use(appointmentRoutes);
 routes.use("/auth", authRoutes);
 routes.use("/api/messages", apiRoutes);
 routes.use("/api", apiRoutes);

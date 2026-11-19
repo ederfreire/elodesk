@@ -826,7 +826,9 @@ const WhatsAppModal = ({ open, onClose, whatsAppId, channel, onOpenQr }) => {
                     value={"nps"}
                     className={classes.modernTab}
                   />
-                  {user.showFlow === "enabled" && (
+                  {/* Aparece também no WhatsApp (wacalls) mesmo sem o Flow Builder
+                      liberado para o usuário: é aqui que se vincula a URA. */}
+                  {(user.showFlow === "enabled" || channel === "wacalls") && (
                     <Tab label={i18n.t("whatsappModal.tabs.defaultFlow")} value={"flowbuilder"} className={classes.modernTab} />
                   )}
                   {schedulesEnabled && (
@@ -2074,44 +2076,6 @@ const WhatsAppModal = ({ open, onClose, whatsAppId, channel, onOpenQr }) => {
                           </FormControl>
                         </div>
 
-                        {channel === "wacalls" && (
-                          <div className={classes.sectionCard}>
-                            <div className={classes.sectionTitle}>{i18n.t("voiceIvr.conexaoTitulo")}</div>
-                            <div className={classes.sectionSubtitle}>
-                              {i18n.t("voiceIvr.conexaoDescricao")}
-                            </div>
-                            <FormControl variant="outlined" margin="dense" fullWidth>
-                              <Select
-                                value={uraDeVoz || ""}
-                                onChange={(e) => setUraDeVoz(e.target.value || "")}
-                                variant="outlined"
-                                margin="dense"
-                                displayEmpty
-                              >
-                                <MenuItem value="">{i18n.t("voiceIvr.conexaoNenhuma")}</MenuItem>
-                                {urasDisponiveis.map((ura) => (
-                                  <MenuItem key={ura.id} value={ura.id}>
-                                    {ura.nome}
-                                    {ura.ativo === false ? ` (${i18n.t("voiceIvr.conexaoDesativada")})` : ""}
-                                  </MenuItem>
-                                ))}
-                              </Select>
-                            </FormControl>
-                            {urasDisponiveis.length === 0 && (
-                              <Typography variant="caption" color="textSecondary" style={{ display: "block", marginTop: 4 }}>
-                                {i18n.t("voiceIvr.conexaoSemUras")}
-                              </Typography>
-                            )}
-                            <Button
-                              size="small"
-                              color="primary"
-                              style={{ marginTop: 6, textTransform: "none" }}
-                              onClick={() => window.open("/voice-ivr", "_blank")}
-                            >
-                              {i18n.t("voiceIvr.conexaoAbrir")}
-                            </Button>
-                          </div>
-                        )}
                       </Grid>
                     </Grid> */}
                   </DialogContent>
@@ -2184,7 +2148,7 @@ const WhatsAppModal = ({ open, onClose, whatsAppId, channel, onOpenQr }) => {
                 </TabPanel>
 
                 {/* Flowbuilder */}
-                {user.showFlow === "enabled" && (
+                {(user.showFlow === "enabled" || channel === "wacalls") && (
                   <>
                     <TabPanel
                       className={classes.container}
@@ -2192,6 +2156,7 @@ const WhatsAppModal = ({ open, onClose, whatsAppId, channel, onOpenQr }) => {
                       name={"flowbuilder"}
                     >
                       <DialogContent className={classes.dialogContentModern}>
+                        {user.showFlow === "enabled" && (
                         <div className={classes.sectionCard}>
                           <div className={classes.sectionTitle}>{i18n.t("flowDefaultPage.linkedFlow")}</div>
                           <div className={classes.sectionSubtitle}>
@@ -2216,6 +2181,48 @@ const WhatsAppModal = ({ open, onClose, whatsAppId, channel, onOpenQr }) => {
                             </Select>
                           </FormControl>
                         </div>
+                        )}
+
+                        {/* URA de voz das ligações — estava dentro de um trecho
+                            comentado da aba Mensagens e por isso nunca aparecia. */}
+                        {channel === "wacalls" && (
+                          <div className={classes.sectionCard} style={{ marginTop: 12 }}>
+                            <div className={classes.sectionTitle}>{i18n.t("voiceIvr.conexaoTitulo")}</div>
+                            <div className={classes.sectionSubtitle}>
+                              {i18n.t("voiceIvr.conexaoDescricao")}
+                            </div>
+                            <FormControl variant="outlined" margin="dense" fullWidth>
+                              <Select
+                                value={uraDeVoz || ""}
+                                onChange={(e) => setUraDeVoz(e.target.value || "")}
+                                variant="outlined"
+                                margin="dense"
+                                displayEmpty
+                              >
+                                <MenuItem value="">{i18n.t("voiceIvr.conexaoNenhuma")}</MenuItem>
+                                {urasDisponiveis.map((ura) => (
+                                  <MenuItem key={ura.id} value={ura.id}>
+                                    {ura.nome}
+                                    {ura.ativo === false ? ` (${i18n.t("voiceIvr.conexaoDesativada")})` : ""}
+                                  </MenuItem>
+                                ))}
+                              </Select>
+                            </FormControl>
+                            {urasDisponiveis.length === 0 && (
+                              <Typography variant="caption" color="textSecondary" style={{ display: "block", marginTop: 4 }}>
+                                {i18n.t("voiceIvr.conexaoSemUras")}
+                              </Typography>
+                            )}
+                            <Button
+                              size="small"
+                              color="primary"
+                              style={{ marginTop: 6, textTransform: "none" }}
+                              onClick={() => window.open("/voice-ivr", "_blank")}
+                            >
+                              {i18n.t("voiceIvr.conexaoAbrir")}
+                            </Button>
+                          </div>
+                        )}
 
                       </DialogContent>
                     </TabPanel>

@@ -86,9 +86,6 @@ import Course from "../models/Course";
 import CourseLesson from "../models/CourseLesson";
 import CourseCompany from "../models/CourseCompany";
 import CourseComment from "../models/CourseComment";
-import AppointmentService from "../models/AppointmentService";
-import AppointmentServiceProfessional from "../models/AppointmentServiceProfessional";
-import AppointmentBooking from "../models/AppointmentBooking";
 
 
 // eslint-disable-next-line
@@ -107,9 +104,6 @@ const models = [
   CourseLesson,
   CourseCompany,
   CourseComment,
-  AppointmentService,
-  AppointmentServiceProfessional,
-  AppointmentBooking,
   User,
   Contact,
   ContactTag,

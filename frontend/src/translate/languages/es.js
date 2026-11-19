@@ -2556,7 +2556,6 @@ const messages = {
           helps: "Ayuda",
           messagesAPI: "API",
           schedules: "Programa",
-          appointmentServices: "Citas de servicios",
           campaigns: "Campañas",
           annoucements: "Informativos",
           chats: "Chat Interno",

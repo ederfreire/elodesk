@@ -10,7 +10,14 @@ MAGENTA='\033[1;35m'
 
 # Variaveis Padrão
 ARCH=$(uname -m)
-UBUNTU_VERSION=$(lsb_release -sr)
+# Versão do Ubuntu pelo /etc/os-release (o lsb_release nem sempre vem
+# instalado nas imagens mínimas do 24.04 em diante).
+UBUNTU_VERSION="$(. /etc/os-release 2>/dev/null && echo "${VERSION_ID}")"
+UBUNTU_CODENAME="$(. /etc/os-release 2>/dev/null && echo "${VERSION_CODENAME:-${UBUNTU_CODENAME}}")"
+[ -z "${UBUNTU_VERSION}" ] && UBUNTU_VERSION=$(lsb_release -sr 2>/dev/null)
+[ -z "${UBUNTU_CODENAME}" ] && UBUNTU_CODENAME=$(lsb_release -cs 2>/dev/null)
+export DEBIAN_FRONTEND=noninteractive
+export NEEDRESTART_MODE=a
 ARQUIVO_VARIAVEIS="VARIAVEIS_INSTALACAO"
 ARQUIVO_ETAPAS="ETAPA_INSTALACAO"
 FFMPEG="$(pwd)/ffmpeg.x"
@@ -19,6 +26,50 @@ ip_atual=$(curl -s http://checkip.amazonaws.com)
 jwt_secret=$(openssl rand -base64 32)
 jwt_refresh_secret=$(openssl rand -base64 32)
 default_apioficial_port=6000
+
+
+# ─────────────── Compatibilidade com Ubuntu 20.04 a 26.04 ───────────────
+# Versões testadas pelo instalador: 20.04, 22.04, 24.04, 25.04, 25.10, 26.04.
+UBUNTU_SUPORTADOS="20.04 22.04 24.04 25.04 25.10 26.04"
+
+ubuntu_preparar() {
+  # Ubuntu 22.04+: o needrestart abre uma tela perguntando quais serviços
+  # reiniciar depois de cada apt install e a instalação fica parada nela.
+  # Aqui ele passa a reiniciar sozinho, sem perguntar.
+  if [ -d /etc/needrestart ] || dpkg -s needrestart >/dev/null 2>&1; then
+    mkdir -p /etc/needrestart/conf.d 2>/dev/null
+    echo "\$nrconf{restart} = 'a';" > /etc/needrestart/conf.d/99-instalador.conf 2>/dev/null || true
+  fi
+  if ! echo " ${UBUNTU_SUPORTADOS} " | grep -q " ${UBUNTU_VERSION} "; then
+    printf "${YELLOW} >> Ubuntu ${UBUNTU_VERSION:-desconhecido} (${UBUNTU_CODENAME:-?}) não está na lista testada (${UBUNTU_SUPORTADOS}). A instalação continua, mas confira os avisos.${WHITE}\n"
+    sleep 3
+  fi
+}
+
+# O pacote tem versão disponível no apt? (pacote "virtual" não conta)
+pacote_existe() {
+  apt-cache policy "$1" 2>/dev/null | grep -q "Candidate: [^(]"
+}
+
+# Recebe nomes de pacote (alternativas separadas por "|") e devolve só os que
+# existem nesta versão do Ubuntu. Do 24.04 em diante muitas bibliotecas
+# ganharam o sufixo "t64" (ex.: libasound2 -> libasound2t64) e outras
+# sumiram (libgconf-2-4, gconf-service, libappindicator1). Antes um único nome
+# inexistente fazia o apt recusar a lista inteira.
+escolher_pacotes() {
+  local saida="" item alt escolhido
+  for item in "$@"; do
+    escolhido=""
+    for alt in ${item//|/ }; do
+      if pacote_existe "${alt}t64"; then escolhido="${alt}t64"; break; fi
+      if pacote_existe "${alt}"; then escolhido="${alt}"; break; fi
+    done
+    [ -n "${escolhido}" ] && saida="${saida} ${escolhido}"
+  done
+  echo "${saida}"
+}
+
+ubuntu_preparar
 
 # Verifica se porta está em uso (true=ocupada, false=livre)
 porta_em_uso() {
@@ -525,7 +576,12 @@ instalar_voz_piper() {
     install -m 0755 -d /etc/apt/keyrings
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg 2>/dev/null || true
     chmod a+r /etc/apt/keyrings/docker.gpg 2>/dev/null || true
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
+    # Repositório do Docker pela versão do Ubuntu; se ainda não tiver a versão
+    # (lançamento muito novo), usa o do 24.04 (noble). Um repositório que não
+    # existe deixava o "apt update" com erro em todas as etapas seguintes.
+    _docker_codename="$(. /etc/os-release && echo "$VERSION_CODENAME")"
+    curl -fsI "https://download.docker.com/linux/ubuntu/dists/${_docker_codename}/Release" >/dev/null 2>&1 || _docker_codename="noble"
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu ${_docker_codename} stable" \
       > /etc/apt/sources.list.d/docker.list
     apt-get update -y >/dev/null 2>&1 || true
     apt-get install -y docker-ce docker-ce-cli containerd.io || apt-get install -y docker.io || printf "${YELLOW} >> [voz] Falha instalando docker${WHITE}\n"
@@ -1351,7 +1407,6 @@ menu_ferramentas() {
     printf "   [${BLUE}7${WHITE}] Instalar troncal SIP (baresip) — ligar/receber por linha SIP no discador\n"
     printf "   [${BLUE}8${WHITE}] Remover troncal SIP (baresip)\n"
     printf "   [${BLUE}9${WHITE}] Verificar e reconstruir o que estiver desatualizado\n"
-    printf "   [${BLUE}10${WHITE}] Atualizar aplicação sem reinstalar o servidor\n"
     printf "   [${BLUE}0${WHITE}] Voltar ao Menu Principal\n"
     echo
     read -p "> " option_tools
@@ -1432,11 +1487,6 @@ menu_ferramentas() {
       # quando se quer ter CERTEZA de que o que está rodando é o código atual.
       detectar_instalacao || true
       verificar_artefatos_build || true
-      echo
-      read -p "Pressione Enter para voltar..." _
-      ;;
-    10)
-      atualizar_aplicacao_incremental
       echo
       read -p "Pressione Enter para voltar..." _
       ;;
@@ -1815,8 +1865,8 @@ instalar_n8n() {
   # ===== ETAPA 1: Instalar Node.js se necessário =====
   printf "${BLUE} >> [1/6] Verificando Node.js...${WHITE}\n"
   if ! command -v node &>/dev/null; then
-    printf "${YELLOW} >> Node.js não encontrado. Instalando v18...${WHITE}\n"
-    curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+    printf "${YELLOW} >> Node.js não encontrado. Instalando v20...${WHITE}\n"
+    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
     sudo apt-get install -y nodejs
   fi
   node_version=$(node -v)
@@ -2078,7 +2128,11 @@ desinstalar_n8n() {
 _typebot_garantir_docker() {
   if ! command -v docker &>/dev/null; then
     printf "${YELLOW} >> Docker não encontrado. Instalando...${WHITE}\n"
-    curl -fsSL https://get.docker.com | sudo sh
+    # O script oficial recusa versões do Ubuntu que ele ainda não conhece;
+    # nesse caso fica o Docker dos repositórios do próprio Ubuntu.
+    curl -fsSL https://get.docker.com | sudo sh || \
+      sudo DEBIAN_FRONTEND=noninteractive apt-get install -y docker.io docker-compose-v2 || \
+      sudo DEBIAN_FRONTEND=noninteractive apt-get install -y docker.io
     sudo usermod -aG docker deploy 2>/dev/null || true
   fi
   if ! docker compose version &>/dev/null; then
@@ -3631,149 +3685,6 @@ _idade_artefato() {
   fi
 }
 
-atualizar_aplicacao_incremental() {
-  carregar_variaveis
-  detectar_instalacao || return 1
-
-  local app_dir="/home/deploy/${empresa}"
-  local instalador_dir
-  local source_mode=""
-  local backend_deps_changed=0
-  local frontend_deps_changed=0
-  local previous_commit=""
-  local dependency_file
-  local changed_files
-
-  instalador_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-  if su - deploy -c "git -C '${app_dir}' rev-parse --is-inside-work-tree" >/dev/null 2>&1; then
-    source_mode="git"
-    local git_status
-    git_status=$(su - deploy -c "git -C '${app_dir}' status --porcelain") || {
-      printf "${RED} >> Não foi possível verificar o estado do repositório da instalação.${WHITE}\n"
-      return 1
-    }
-    if [ -n "${git_status}" ]; then
-      printf "${RED} >> Atualização cancelada: há alterações locais em ${app_dir}.${WHITE}\n"
-      printf "${YELLOW} >> Salve ou descarte essas alterações antes de atualizar.${WHITE}\n"
-      return 1
-    fi
-  elif [ -d "${instalador_dir}/backend" ] && [ -d "${instalador_dir}/frontend" ]; then
-    source_mode="local"
-    for dependency_file in package.json package-lock.json; do
-      if [ -f "${instalador_dir}/backend/${dependency_file}" ] && \
-        ! cmp -s "${instalador_dir}/backend/${dependency_file}" "${app_dir}/backend/${dependency_file}"; then
-        backend_deps_changed=1
-      fi
-      if [ -f "${instalador_dir}/frontend/${dependency_file}" ] && \
-        ! cmp -s "${instalador_dir}/frontend/${dependency_file}" "${app_dir}/frontend/${dependency_file}"; then
-        frontend_deps_changed=1
-      fi
-    done
-  else
-    printf "${RED} >> Não encontrei um checkout Git na instalação nem as pastas backend/frontend junto ao instalador.${WHITE}\n"
-    return 1
-  fi
-
-  banner
-  printf "${WHITE} >> Atualização incremental da instalação: ${CYAN}${app_dir}${WHITE}\n"
-  if [ "${source_mode}" = "git" ]; then
-    printf "${WHITE} >> Código: atualização do branch configurado no Git.${WHITE}\n"
-  else
-    printf "${WHITE} >> Código: arquivos backend/frontend junto ao instalador.${WHITE}\n"
-  fi
-  printf "${YELLOW} >> O instalador não atualizará pacotes do sistema nem outros serviços.${WHITE}\n"
-  echo
-  read -p "Deseja continuar? (S/N): " confirmacao_atualizacao
-  confirmacao_atualizacao=$(echo "${confirmacao_atualizacao}" | tr '[:lower:]' '[:upper:]')
-  if [ "${confirmacao_atualizacao}" != "S" ]; then
-    printf "${YELLOW} >> Atualização cancelada.${WHITE}\n"
-    return 0
-  fi
-
-  backup_app_atualizar || {
-    printf "${RED} >> Não foi possível preparar a atualização.${WHITE}\n"
-    return 1
-  }
-
-  if [ "${source_mode}" = "git" ]; then
-    previous_commit=$(su - deploy -c "git -C '${app_dir}' rev-parse HEAD") || return 1
-    if ! su - deploy -c "git -C '${app_dir}' pull --ff-only"; then
-      printf "${RED} >> Falha ao atualizar o código pelo Git. Nenhum processo foi reiniciado.${WHITE}\n"
-      return 1
-    fi
-    changed_files=$(su - deploy -c "git -C '${app_dir}' diff --name-only '${previous_commit}' HEAD") || {
-      printf "${RED} >> Não foi possível verificar os arquivos atualizados pelo Git.${WHITE}\n"
-      return 1
-    }
-    case "${changed_files}" in
-      *backend/package.json*|*backend/package-lock.json*) backend_deps_changed=1 ;;
-    esac
-    case "${changed_files}" in
-      *frontend/package.json*|*frontend/package-lock.json*) frontend_deps_changed=1 ;;
-    esac
-  else
-    if ! command -v rsync >/dev/null 2>&1; then
-      printf "${RED} >> rsync não está instalado; não foi possível copiar o código.${WHITE}\n"
-      return 1
-    fi
-    rsync -a --chown=deploy:deploy --exclude='.git' --exclude='node_modules' \
-      --exclude='.env' --exclude='dist' --exclude='public' \
-      "${instalador_dir}/backend/" "${app_dir}/backend/" || return 1
-    rsync -a --chown=deploy:deploy --exclude='.git' --exclude='node_modules' \
-      --exclude='.env' --exclude='build' \
-      "${instalador_dir}/frontend/" "${app_dir}/frontend/" || return 1
-    if [ -f "${instalador_dir}/backend/public/webchat.js" ]; then
-      mkdir -p "${app_dir}/backend/public"
-      cp -f "${instalador_dir}/backend/public/webchat.js" "${app_dir}/backend/public/webchat.js" || return 1
-      chown deploy:deploy "${app_dir}/backend/public/webchat.js" || return 1
-    fi
-  fi
-
-  local node_path="export PATH=/usr/local/n/versions/node/20.19.4/bin:/usr/bin:/usr/local/bin:\$PATH"
-  if [ "${backend_deps_changed}" -eq 1 ]; then
-    printf "${WHITE} >> Dependências do backend alteradas; instalando dependências...${WHITE}\n"
-    if ! su - deploy -c "set -e; ${node_path}; cd '${app_dir}/backend'; PUPPETEER_SKIP_DOWNLOAD=true npm install --no-audit --no-fund --include=dev --legacy-peer-deps"; then
-      printf "${RED} >> Instalação das dependências do backend falhou.${WHITE}\n"
-      return 1
-    fi
-  fi
-  if [ "${frontend_deps_changed}" -eq 1 ]; then
-    printf "${WHITE} >> Dependências do frontend alteradas; instalando dependências...${WHITE}\n"
-    if ! su - deploy -c "set -e; ${node_path}; cd '${app_dir}/frontend'; npm install --no-audit --no-fund --legacy-peer-deps"; then
-      printf "${RED} >> Instalação das dependências do frontend falhou.${WHITE}\n"
-      return 1
-    fi
-  fi
-
-  printf "${WHITE} >> Compilando backend...${WHITE}\n"
-  if ! su - deploy -c "set -e; ${node_path}; cd '${app_dir}/backend'; npm run build"; then
-    printf "${RED} >> Build do backend falhou; migrações e reinícios não foram executados.${WHITE}\n"
-    return 1
-  fi
-
-  printf "${WHITE} >> Compilando frontend...${WHITE}\n"
-  if ! su - deploy -c "set -e; ${node_path}; cd '${app_dir}/frontend'; NODE_OPTIONS='--max-old-space-size=4096 --openssl-legacy-provider' npm run build"; then
-    printf "${RED} >> Build do frontend falhou; migrações e reinícios não foram executados.${WHITE}\n"
-    return 1
-  fi
-
-  printf "${WHITE} >> Aplicando migrações do banco...${WHITE}\n"
-  if ! su - deploy -c "set -e; ${node_path}; cd '${app_dir}/backend'; npx sequelize db:migrate"; then
-    printf "${RED} >> Migrações falharam; os processos não foram reiniciados.${WHITE}\n"
-    return 1
-  fi
-
-  printf "${WHITE} >> Reiniciando somente backend e frontend da instalação...${WHITE}\n"
-  if ! su - deploy -c "set -e; ${node_path}; pm2 restart '${empresa}-backend' --update-env; pm2 restart '${empresa}-frontend' --update-env"; then
-    printf "${RED} >> Falha ao reiniciar os processos da aplicação. Verifique o estado no PM2.${WHITE}\n"
-    return 1
-  fi
-
-  printf "${GREEN} >> Atualização incremental concluída com sucesso.${WHITE}\n"
-  return 0
-}
-
 verificar_artefatos_build() {
   local APP_DIR="/home/deploy/${empresa}"
   local pendencias=0
@@ -4686,7 +4597,8 @@ confirma_dados_instalacao_base() {
 atualiza_vps_base() {
   UPDATE_FILE="$(pwd)/update.x"
   {
-    sudo DEBIAN_FRONTEND=noninteractive apt update -y && sudo DEBIAN_FRONTEND=noninteractive apt upgrade -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" && sudo DEBIAN_FRONTEND=noninteractive apt-get install build-essential -y && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y apparmor-utils
+    ubuntu_preparar
+    sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt update -y && sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt upgrade -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" && sudo DEBIAN_FRONTEND=noninteractive apt-get install build-essential -y && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y apparmor-utils
     touch "${UPDATE_FILE}"
     sleep 2
   } || trata_erro "atualiza_vps_base"
@@ -4789,30 +4701,28 @@ instala_puppeteer_base() {
   printf "${WHITE} >> Instalando puppeteer dependencies...\n"
   echo
   {
-    sudo su - root <<EOF
-apt-get install -y libaom-dev libass-dev libfreetype6-dev libfribidi-dev \
-                   libharfbuzz-dev libgme-dev libgsm1-dev libmp3lame-dev \
-                   libopencore-amrnb-dev libopencore-amrwb-dev libopenmpt-dev \
-                   libopus-dev libfdk-aac-dev librubberband-dev libspeex-dev \
-                   libssh-dev libtheora-dev libvidstab-dev libvo-amrwbenc-dev \
-                   libvorbis-dev libvpx-dev libwebp-dev libx264-dev libx265-dev \
-                   libxvidcore-dev libzmq3-dev libsdl2-dev build-essential \
-                   yasm cmake libtool libc6 libc6-dev unzip wget pkg-config texinfo zlib1g-dev \
-                   libxshmfence-dev libgcc1 libgbm-dev fontconfig locales gconf-service libasound2 \
-                   libatk1.0-0 libcairo2 libcups2 libdbus-1-3 libexpat1 libfontconfig1 libgcc-s1 \
-                   libgconf-2-4 libgdk-pixbuf2.0-0 libglib2.0-0 libgtk-3-0 libnspr4 libpango-1.0-0 \
-                   libpangocairo-1.0-0 libstdc++6 libx11-6 libx11-xcb1 libxcb1 libxcomposite1 \
-                   libxcursor1 libxdamage1 libxext6 libxfixes3 libxi6 libxrandr2 libxrender1 \
-                   libxss1 libxtst6 ca-certificates fonts-liberation libappindicator1 libnss3 \
-                   lsb-release xdg-utils
-
-if grep -q "20.04" /etc/os-release; then
-    apt-get install -y libsrt-dev
-else
-    apt-get install -y libsrt-openssl-dev
-fi
-
-EOF
+    sudo apt-get update -y >/dev/null 2>&1 || true
+    # Só os nomes que existem nesta versão do Ubuntu (ver escolher_pacotes).
+    local pacotes
+    pacotes="$(escolher_pacotes \
+      libaom-dev libass-dev libfreetype6-dev libfribidi-dev \
+      libharfbuzz-dev libgme-dev libgsm1-dev libmp3lame-dev \
+      libopencore-amrnb-dev libopencore-amrwb-dev libopenmpt-dev \
+      libopus-dev libfdk-aac-dev librubberband-dev libspeex-dev \
+      libssh-dev libtheora-dev libvidstab-dev libvo-amrwbenc-dev \
+      libvorbis-dev libvpx-dev libwebp-dev libx264-dev libx265-dev \
+      libxvidcore-dev libzmq3-dev libsdl2-dev build-essential \
+      yasm cmake libtool libc6 libc6-dev unzip wget pkg-config texinfo zlib1g-dev \
+      libxshmfence-dev "libgcc-s1|libgcc1" libgbm-dev fontconfig locales gconf-service libasound2 \
+      libatk1.0-0 libcairo2 libcups2 libdbus-1-3 libexpat1 libfontconfig1 \
+      libgconf-2-4 "libgdk-pixbuf-2.0-0|libgdk-pixbuf2.0-0" libglib2.0-0 libgtk-3-0 libnspr4 libpango-1.0-0 \
+      libpangocairo-1.0-0 libstdc++6 libx11-6 libx11-xcb1 libxcb1 libxcomposite1 \
+      libxcursor1 libxdamage1 libxext6 libxfixes3 libxi6 libxrandr2 libxrender1 \
+      libxss1 libxtst6 ca-certificates fonts-liberation "libayatana-appindicator3-1|libappindicator1" libnss3 \
+      lsb-release xdg-utils \
+      "libsrt-openssl-dev|libsrt-dev")"
+    printf "${WHITE} >> Ubuntu ${UBUNTU_VERSION}: instalando $(echo ${pacotes} | wc -w) pacotes.${WHITE}\n"
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ${pacotes}
     sleep 2
   } || trata_erro "instala_puppeteer_base"
 }
@@ -4868,12 +4778,20 @@ instala_postgres_base() {
   printf "${WHITE} >> Instalando postgres...\n"
   echo
   {
-    sudo su - root <<EOF
-  sudo apt-get install gnupg -y
-  sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt \$(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
-  wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
-  sudo apt-get update -y && sudo apt-get -y install postgresql-17
-EOF
+    # Repositório oficial do PostgreSQL. A chave vai para /etc/apt/keyrings
+    # (o apt-key saiu do Ubuntu 25.04 em diante). Se o repositório ainda não
+    # tiver a versão do Ubuntu (lançamento muito novo), usa a do 24.04 (noble).
+    local pg_codename="${UBUNTU_CODENAME}"
+    if ! curl -fsI "https://apt.postgresql.org/pub/repos/apt/dists/${pg_codename}-pgdg/Release" >/dev/null 2>&1; then
+      printf "${YELLOW} >> Repositório do PostgreSQL ainda sem '${pg_codename}': usando o do Ubuntu 24.04 (noble).${WHITE}\n"
+      pg_codename="noble"
+    fi
+    sudo apt-get install -y gnupg curl ca-certificates
+    sudo install -d -m 0755 /etc/apt/keyrings
+    curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor --yes -o /etc/apt/keyrings/postgresql.gpg
+    sudo chmod a+r /etc/apt/keyrings/postgresql.gpg
+    echo "deb [signed-by=/etc/apt/keyrings/postgresql.gpg] http://apt.postgresql.org/pub/repos/apt ${pg_codename}-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+    sudo apt-get update -y && sudo DEBIAN_FRONTEND=noninteractive apt-get -y install postgresql-17
     sleep 2
   } || trata_erro "instala_postgres_base"
 }
@@ -4983,12 +4901,24 @@ NODEINSTALL
 # Instala Redis
 instala_redis_base() {
   {
+    # Algumas versões novas do Ubuntu podem trazer o Valkey (substituto
+    # compatível do Redis) em vez do redis-server. O sistema funciona com os
+    # dois: mesma porta 6379 e mesmo protocolo.
+    local redis_pacote="redis-server" redis_conf="/etc/redis/redis.conf" redis_servico="redis-server"
+    if ! pacote_existe redis-server && pacote_existe valkey-server; then
+      redis_pacote="valkey-server"; redis_conf="/etc/valkey/valkey.conf"; redis_servico="valkey-server"
+      printf "${YELLOW} >> Ubuntu ${UBUNTU_VERSION} sem redis-server: instalando o Valkey (compatível).${WHITE}\n"
+    fi
     sudo su - root <<EOF
-  apt install redis-server -y
-  systemctl enable redis-server.service
-  sed -i 's/# requirepass foobared/requirepass ${senha_deploy}/g' /etc/redis/redis.conf
-  sed -i 's/^appendonly no/appendonly yes/g' /etc/redis/redis.conf
-  systemctl restart redis-server.service
+  DEBIAN_FRONTEND=noninteractive apt-get install -y ${redis_pacote}
+  systemctl enable ${redis_servico}.service
+  if grep -qE '^#? *requirepass ' ${redis_conf}; then
+    sed -i -E 's/^#? *requirepass .*/requirepass ${senha_deploy}/' ${redis_conf}
+  else
+    echo 'requirepass ${senha_deploy}' >> ${redis_conf}
+  fi
+  sed -i 's/^appendonly no/appendonly yes/g' ${redis_conf}
+  systemctl restart ${redis_servico}.service
 EOF
     sleep 2
   } || trata_erro "instala_redis_base"

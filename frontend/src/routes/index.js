@@ -65,7 +65,6 @@ const Kanban = lazy(() => import("../pages/Kanban"));
 const TagsKanban = lazy(() => import("../pages/TagsKanban"));
 const KanbanBoards = lazy(() => import("../pages/KanbanBoards"));
 const BirthdaySettingsPage = lazy(() => import("../pages/BirthdaySettings"));
-const Appointments = lazy(() => import("../pages/Appointments"));
 
 const FlowBuilderConfig = lazy(() =>
   import("../pages/FlowBuilderConfig").then(m => ({ default: m.FlowBuilderConfig }))
@@ -243,12 +242,6 @@ const RoutesContent = () => {
                   exact
                   path="/schedules"
                   component={Schedules}
-                  isPrivate
-                />
-                <Route
-                  exact
-                  path="/appointments"
-                  component={Appointments}
                   isPrivate
                 />
                 <Route exact path="/tags" component={Tags} isPrivate />

@@ -963,7 +963,6 @@ const LoggedInLayout = ({ children, themeToggle, hideMenu = false }) => {
     ] : []),
     ...(user.showContacts === "enabled" && showContacts ? [{ to: "/contacts", label: i18n.t("mainDrawer.listItems.contacts"), icon: <ContactPhoneOutlinedIcon /> }] : []),
     ...(user.showSchedules === "enabled" && showSchedules ? [{ to: "/schedules", label: i18n.t("mainDrawer.listItems.schedules"), icon: <Schedule /> }] : []),
-    { to: "/appointments", label: i18n.t("mainDrawer.listItems.appointmentServices"), icon: <Schedule /> },
     { to: "/tags", label: i18n.t("mainDrawer.listItems.tags"), icon: <LocalOfferIcon /> },
     { to: "/todolist", label: i18n.t("mainDrawer.listItems.tasks"), icon: <CheckBoxOutlinedIcon /> },
     ...(user.showInternalChat === "enabled" && showInternalChat ? [{ to: "/chats", label: i18n.t("mainDrawer.listItems.chats"), icon: <ForumIcon /> }] : []),

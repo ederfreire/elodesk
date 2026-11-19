@@ -2301,7 +2301,6 @@ const messages = {
           helps: "المساعدة",
           messagesAPI: "API",
           schedules: "الجدولة",
-          appointmentServices: "حجوزات الخدمات",
           campaigns: "الحملات",
           annoucements: "الإعلانات",
           chats: "المحادثة الداخلية",

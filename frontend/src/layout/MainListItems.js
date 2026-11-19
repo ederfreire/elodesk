@@ -795,13 +795,6 @@ const MainListItems = ({ collapsed, drawerClose }) => {
       )}
 
       <ListItemLink
-        to="/appointments"
-        primary={i18n.t("mainDrawer.listItems.appointmentServices", "Agendamento de serviços")}
-        icon={<EventAvailableIcon />}
-        tooltip={collapsed}
-      />
-
-      <ListItemLink
         to="/tags"
         primary={i18n.t("mainDrawer.listItems.tags")}
         icon={<LocalOfferIcon />}

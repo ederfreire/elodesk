@@ -4,31 +4,23 @@ import logger from "../utils/logger";
 /**
  * Mapa de moedas suportadas (espelha o frontend currencyHelper).
  */
-const CURRENCIES: Record<string, { symbol: string; code: string; locale: string }> = {
-  BRL: { symbol: "R$", code: "BRL", locale: "pt-BR" },
-  USD: { symbol: "$", code: "USD", locale: "en-US" },
-  EUR: { symbol: "€", code: "EUR", locale: "de-DE" },
-  GBP: { symbol: "£", code: "GBP", locale: "en-GB" },
-  ARS: { symbol: "$", code: "ARS", locale: "es-AR" },
-  CLP: { symbol: "$", code: "CLP", locale: "es-CL" },
-  COP: { symbol: "$", code: "COP", locale: "es-CO" },
-  MXN: { symbol: "$", code: "MXN", locale: "es-MX" },
-  PEN: { symbol: "S/", code: "PEN", locale: "es-PE" },
-  UYU: { symbol: "$U", code: "UYU", locale: "es-UY" },
-  PYG: { symbol: "₲", code: "PYG", locale: "es-PY" },
-  BOB: { symbol: "Bs", code: "BOB", locale: "es-BO" },
+const CURRENCIES: Record<string, { symbol: string; code: string }> = {
+  BRL: { symbol: "R$", code: "BRL" },
+  USD: { symbol: "$", code: "USD" },
+  EUR: { symbol: "€", code: "EUR" },
+  GBP: { symbol: "£", code: "GBP" },
+  ARS: { symbol: "$", code: "ARS" },
+  CLP: { symbol: "$", code: "CLP" },
+  COP: { symbol: "$", code: "COP" },
+  MXN: { symbol: "$", code: "MXN" },
+  PEN: { symbol: "S/", code: "PEN" },
+  UYU: { symbol: "$U", code: "UYU" },
+  PYG: { symbol: "₲", code: "PYG" },
+  BOB: { symbol: "Bs", code: "BOB" },
 };
 
 export const getCurrencyInfo = (code?: string) => {
   return CURRENCIES[(code || "").toUpperCase()] || CURRENCIES.BRL;
-};
-
-export const formatCompanyCurrency = (value: number, currencyCode?: string): string => {
-  const currency = getCurrencyInfo(currencyCode);
-  return new Intl.NumberFormat(currency.locale, {
-    style: "currency",
-    currency: currency.code
-  }).format(Number(value || 0));
 };
 
 /**
