@@ -2609,6 +2609,7 @@ const messages = {
           helps: "Ajuda",
           messagesAPI: "API",
           schedules: "Agendamentos",
+          appointmentServices: "Agendamento de serviços",
           campaigns: "Campanhas",
           annoucements: "Informativos",
           chats: "Chat Interno",

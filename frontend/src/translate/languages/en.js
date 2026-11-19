@@ -2577,6 +2577,7 @@ const messages = {
           helps: "Help Center",
           messagesAPI: "API",
           schedules: "Schedules",
+          appointmentServices: "Service bookings",
           campaigns: "Campaigns",
           annoucements: "Announcements",
           chats: "Internal Chat",
