@@ -1,0 +1,230 @@
+import ArrowForwardIos from "@mui/icons-material/ArrowForwardIos";
+import ContentCopy from "@mui/icons-material/ContentCopy";
+import Delete from "@mui/icons-material/Delete";
+import LinkOff from "@mui/icons-material/LinkOff";
+import React, { memo } from "react";
+import { useNodeStorage } from "../../../stores/useNodeStorage";
+import { Handle } from "react-flow-renderer";
+import BoltIcon from "@mui/icons-material/Bolt";
+
+const N8N_COLOR = "#EA4B71";
+
+import { i18n } from "../../../translate/i18n";
+
+const EVENT_LABELS = {
+  ticket: `🎫 ${i18n.t("n8nLogsDrawer.evTicket", { defaultValue: "Ticket" })}`,
+  connection: `📶 ${i18n.t("n8nLogsDrawer.evConnection", { defaultValue: "Conexión" })}`,
+  message: `💬 ${i18n.t("n8nLogsDrawer.evMessage", { defaultValue: "Mensaje" })}`,
+  contact: `👤 ${i18n.t("n8nLogsDrawer.evContact", { defaultValue: "Contacto" })}`,
+};
+
+export default memo(({ data, isConnectable, id }) => {
+  const storageItems = useNodeStorage();
+
+  const events = data?.events || {};
+  const activeEvents = Object.keys(events).filter((k) => events[k]);
+  const mode = data?.mode === "sync"
+    ? i18n.t("flowBuilderN8nTriggerModal.modeSync", { defaultValue: "Esperar respuesta" })
+    : i18n.t("flowBuilderN8nTriggerModal.modeAsync", { defaultValue: "Fire-and-forget" });
+  const urlPreview = data?.webhookUrl
+    ? data.webhookUrl.length > 38
+      ? data.webhookUrl.substring(0, 38) + "…"
+      : data.webhookUrl
+    : i18n.t("n8nTriggerNode.configureUrl", { defaultValue: "Configura la URL del webhook" });
+
+  return (
+    <div
+      style={{
+        backgroundColor: "#ffffff",
+        padding: "8px",
+        borderRadius: "8px",
+        boxShadow: "rgba(0, 0, 0, 0.05) 0px 3px 5px",
+        border: `1px solid ${N8N_COLOR}55`,
+        minWidth: 240,
+      }}
+    >
+      <Handle
+        type="target"
+        position="left"
+        style={{
+          background: N8N_COLOR,
+          width: "18px",
+          height: "18px",
+          top: "20px",
+          left: "-12px",
+          cursor: "pointer",
+        }}
+        isConnectable={isConnectable}
+      >
+        <ArrowForwardIos
+          sx={{
+            color: "#fff",
+            width: "10px",
+            height: "10px",
+            marginLeft: "2.9px",
+            marginBottom: "1px",
+            pointerEvents: "none",
+          }}
+        />
+      </Handle>
+
+      <div
+        style={{
+          display: "flex",
+          position: "absolute",
+          right: 5,
+          top: 5,
+          cursor: "pointer",
+          gap: 6,
+        }}
+      >
+        <ContentCopy
+          onClick={() => {
+            storageItems.setNodesStorage(id);
+            storageItems.setAct("duplicate");
+          }}
+          sx={{ width: "12px", height: "12px", color: N8N_COLOR }}
+        />
+        <LinkOff
+          onClick={() => {
+            storageItems.setNodesStorage(id);
+            storageItems.setAct("disconnect");
+          }}
+          sx={{ width: "12px", height: "12px", color: N8N_COLOR }}
+        />
+        <Delete
+          onClick={() => {
+            storageItems.setNodesStorage(id);
+            storageItems.setAct("delete");
+          }}
+          sx={{ width: "12px", height: "12px", color: N8N_COLOR }}
+        />
+      </div>
+
+      <div
+        style={{
+          color: "#232323",
+          fontSize: "16px",
+          flexDirection: "row",
+          display: "flex",
+        }}
+      >
+        <BoltIcon
+          style={{
+            width: "18px",
+            height: "18px",
+            marginRight: "4px",
+            marginTop: "2px",
+            color: N8N_COLOR,
+          }}
+        />
+        <div style={{ color: "#232323", fontSize: "16px", fontWeight: "bold" }}>
+          n8n Trigger
+        </div>
+      </div>
+
+      <div
+        style={{
+          color: "#232323",
+          fontSize: "12px",
+          width: 230,
+          marginTop: 4,
+        }}
+      >
+        <div
+          style={{
+            backgroundColor: "#FDE8ED",
+            borderRadius: "5px",
+            padding: "6px",
+          }}
+        >
+          <div
+            style={{
+              textAlign: "center",
+              fontWeight: 500,
+              fontSize: "11px",
+              wordBreak: "break-all",
+            }}
+          >
+            {urlPreview}
+          </div>
+          <div
+            style={{
+              textAlign: "center",
+              fontSize: "10px",
+              color: N8N_COLOR,
+              marginTop: 4,
+              fontWeight: 600,
+            }}
+          >
+            ⚡ {mode}
+          </div>
+          {activeEvents.length > 0 && (
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                justifyContent: "center",
+                gap: 3,
+                marginTop: 4,
+              }}
+            >
+              {activeEvents.map((ev) => (
+                <span
+                  key={ev}
+                  style={{
+                    fontSize: "9px",
+                    backgroundColor: "#fff",
+                    color: N8N_COLOR,
+                    borderRadius: 3,
+                    padding: "1px 4px",
+                    border: `1px solid ${N8N_COLOR}33`,
+                  }}
+                >
+                  {EVENT_LABELS[ev]}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+        <div
+          style={{
+            fontSize: "10px",
+            color: "#5a5a5a",
+            fontStyle: "italic",
+            lineHeight: 1.3,
+            padding: "4px 2px 0",
+          }}
+        >
+          {i18n.t("n8nTriggerNode.help", { defaultValue: "Dispara webhook n8n con los eventos seleccionados." })}
+        </div>
+      </div>
+
+      <Handle
+        type="source"
+        position="right"
+        id="a"
+        style={{
+          background: N8N_COLOR,
+          width: "18px",
+          height: "18px",
+          top: "70%",
+          right: "-11px",
+          cursor: "pointer",
+        }}
+        isConnectable={isConnectable}
+      >
+        <ArrowForwardIos
+          sx={{
+            color: "#fff",
+            width: "10px",
+            height: "10px",
+            marginLeft: "2.9px",
+            marginBottom: "1px",
+            pointerEvents: "none",
+          }}
+        />
+      </Handle>
+    </div>
+  );
+});

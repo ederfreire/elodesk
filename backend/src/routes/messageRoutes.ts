@@ -1,0 +1,28 @@
+import { Router } from "express";
+import multer from "multer";
+import isAuth from "../middleware/isAuth";
+import uploadConfig from "../config/upload";
+
+import * as MessageController from "../controllers/MessageController";
+
+const messageRoutes = Router();
+
+const upload = multer(uploadConfig);
+
+messageRoutes.get("/messages/:ticketId", isAuth, MessageController.index);
+messageRoutes.post("/messages/:ticketId", isAuth, upload.array("medias"), MessageController.store);
+messageRoutes.post("/messages-template/:ticketId", isAuth, upload.array("medias"), MessageController.storeTemplate);
+messageRoutes.post("/message/transcribeAudio", isAuth, MessageController.transcribeAudioMessage);
+
+// messageRoutes.post("/forwardmessage",isAuth,MessageController.forwardmessage);
+messageRoutes.delete("/messages/:messageId", isAuth, MessageController.remove);
+messageRoutes.post("/messages/edit/:messageId", isAuth, MessageController.edit);
+
+messageRoutes.get("/messages-allMe", isAuth, MessageController.allMe);
+messageRoutes.post('/message/forward', isAuth, MessageController.forwardMessage)
+messageRoutes.post("/messages-interactive/:ticketId", isAuth, MessageController.storeInteractive);
+messageRoutes.post("/messages/:messageId/react", isAuth, MessageController.reactToMessage);
+messageRoutes.post("/messages/:ticketId/ai-suggest", isAuth, MessageController.aiSuggestReply);
+messageRoutes.post("/messages/:ticketId/ai-summarize", isAuth, MessageController.aiSummarize);
+
+export default messageRoutes;

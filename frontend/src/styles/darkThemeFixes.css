@@ -1,0 +1,224 @@
+/* ============================================================
+   DARK THEME GLOBAL FIXES
+   Aplica contraste seguro apenas quando o app está
+   explicitamente em modo escuro (body[data-theme="dark"]).
+   NÃO usa prefers-color-scheme para evitar quebrar o tema claro
+   em sistemas operacionais configurados como dark.
+============================================================ */
+
+body[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+/* ---------- Tipografia ---------- */
+body[data-theme="dark"] .MuiTypography-root { color: #e8eaed; }
+body[data-theme="dark"] .MuiTypography-h1,
+body[data-theme="dark"] .MuiTypography-h2,
+body[data-theme="dark"] .MuiTypography-h3,
+body[data-theme="dark"] .MuiTypography-h4,
+body[data-theme="dark"] .MuiTypography-h5,
+body[data-theme="dark"] .MuiTypography-h6,
+body[data-theme="dark"] .MuiTypography-subtitle1,
+body[data-theme="dark"] .MuiTypography-subtitle2 { color: #f5f6f8 !important; }
+body[data-theme="dark"] .MuiTypography-body1,
+body[data-theme="dark"] .MuiTypography-body2 { color: #e8eaed !important; }
+body[data-theme="dark"] .MuiTypography-caption,
+body[data-theme="dark"] .MuiFormHelperText-root,
+body[data-theme="dark"] .MuiListItemText-secondary { color: #9aa0a6 !important; }
+
+/* ---------- Superfícies ---------- */
+body[data-theme="dark"] .MuiPaper-root:not(.MuiAppBar-root):not(.MuiSnackbarContent-root) {
+  background-color: #141620 !important;
+  color: #e8eaed !important;
+  border-color: rgba(255,255,255,0.10);
+}
+body[data-theme="dark"] .MuiCard-root,
+body[data-theme="dark"] .MuiAccordion-root,
+body[data-theme="dark"] .MuiDialog-paper,
+body[data-theme="dark"] .MuiPopover-paper,
+body[data-theme="dark"] .MuiMenu-paper {
+  background-color: #1a1c2e !important;
+  color: #e8eaed !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+}
+body[data-theme="dark"] .MuiAppBar-root { background-color: #0d0f18 !important; color: #e8eaed !important; }
+body[data-theme="dark"] .MuiDivider-root { background-color: rgba(255,255,255,0.10) !important; }
+body[data-theme="dark"] .MuiBackdrop-root { background-color: rgba(0,0,0,0.65) !important; }
+
+/* ---------- Inputs ---------- */
+body[data-theme="dark"] .MuiOutlinedInput-root {
+  background-color: #1a1c2e !important;
+  color: #e8eaed !important;
+}
+body[data-theme="dark"] .MuiOutlinedInput-input,
+body[data-theme="dark"] .MuiSelect-select,
+body[data-theme="dark"] .MuiInputBase-input,
+body[data-theme="dark"] .MuiNativeSelect-select,
+body[data-theme="dark"] textarea.MuiInputBase-input {
+  color: #e8eaed !important;
+  -webkit-text-fill-color: #e8eaed !important;
+  caret-color: #6ba6ff;
+}
+body[data-theme="dark"] .MuiOutlinedInput-input::placeholder,
+body[data-theme="dark"] textarea.MuiInputBase-input::placeholder {
+  color: #9aa0a6 !important;
+  opacity: 1 !important;
+}
+body[data-theme="dark"] .MuiOutlinedInput-notchedOutline { border-color: rgba(255,255,255,0.18) !important; }
+body[data-theme="dark"] .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline { border-color: rgba(255,255,255,0.32) !important; }
+body[data-theme="dark"] .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline { border-color: #6ba6ff !important; }
+body[data-theme="dark"] .MuiOutlinedInput-root.Mui-focused { box-shadow: 0 0 0 4px rgba(107,166,255,0.18); }
+body[data-theme="dark"] .MuiOutlinedInput-root.Mui-disabled { background-color: rgba(255,255,255,0.04) !important; }
+body[data-theme="dark"] .MuiOutlinedInput-input.Mui-disabled { -webkit-text-fill-color: rgba(255,255,255,0.4) !important; }
+
+body[data-theme="dark"] .MuiInputLabel-root,
+body[data-theme="dark"] .MuiFormLabel-root { color: #9aa0a6 !important; }
+body[data-theme="dark"] .MuiInputLabel-root.Mui-focused,
+body[data-theme="dark"] .MuiFormLabel-root.Mui-focused { color: #6ba6ff !important; }
+body[data-theme="dark"] .MuiInputLabel-root.Mui-error,
+body[data-theme="dark"] .MuiFormLabel-root.Mui-error { color: #ff6b6b !important; }
+body[data-theme="dark"] .MuiFormHelperText-root.Mui-error { color: #ff6b6b !important; }
+
+body[data-theme="dark"] input:-webkit-autofill,
+body[data-theme="dark"] textarea:-webkit-autofill,
+body[data-theme="dark"] select:-webkit-autofill {
+  -webkit-text-fill-color: #e8eaed !important;
+  -webkit-box-shadow: 0 0 0 1000px #1a1c2e inset !important;
+  caret-color: #6ba6ff !important;
+}
+
+body[data-theme="dark"] .MuiSelect-icon,
+body[data-theme="dark"] .MuiNativeSelect-icon { color: #9aa0a6 !important; }
+body[data-theme="dark"] .MuiMenuItem-root { color: #e8eaed !important; }
+body[data-theme="dark"] .MuiMenuItem-root:hover,
+body[data-theme="dark"] .MuiMenuItem-root.Mui-selected { background-color: rgba(107,166,255,0.15) !important; color: #f5f6f8 !important; }
+body[data-theme="dark"] .MuiMenuItem-root.Mui-selected:hover { background-color: rgba(107,166,255,0.22) !important; }
+
+/* ---------- Botões ---------- */
+body[data-theme="dark"] .MuiButton-root { color: #e8eaed; }
+body[data-theme="dark"] .MuiButton-text { color: #e8eaed !important; }
+body[data-theme="dark"] .MuiButton-text:hover { background: rgba(255,255,255,0.06) !important; }
+
+body[data-theme="dark"] .MuiButton-outlined,
+body[data-theme="dark"] .MuiButton-outlinedPrimary,
+body[data-theme="dark"] .MuiButton-outlinedSecondary {
+  color: #e8eaed !important;
+  border: 1px solid rgba(255,255,255,0.22) !important;
+  background: transparent !important;
+}
+body[data-theme="dark"] .MuiButton-outlined:hover,
+body[data-theme="dark"] .MuiButton-outlinedPrimary:hover,
+body[data-theme="dark"] .MuiButton-outlinedSecondary:hover {
+  background: rgba(255,255,255,0.06) !important;
+  border-color: rgba(255,255,255,0.38) !important;
+}
+
+body[data-theme="dark"] .MuiButton-contained {
+  background-color: #2a2d44 !important;
+  color: #f5f6f8 !important;
+}
+body[data-theme="dark"] .MuiButton-contained:hover { background-color: #353955 !important; }
+
+body[data-theme="dark"] .MuiButton-containedPrimary {
+  background-color: #6ba6ff !important;
+  color: #0d0f18 !important;
+  box-shadow: 0 8px 16px -8px rgba(107,166,255,0.5) !important;
+}
+body[data-theme="dark"] .MuiButton-containedPrimary:hover { background-color: #4f93ff !important; }
+
+body[data-theme="dark"] .MuiButton-containedSecondary {
+  background-color: #f5f6f8 !important;
+  color: #0d0f18 !important;
+}
+body[data-theme="dark"] .MuiButton-containedSecondary:hover { background-color: #e8eaed !important; }
+
+body[data-theme="dark"] .MuiButton-root.Mui-disabled {
+  color: rgba(255,255,255,0.35) !important;
+  background-color: rgba(255,255,255,0.06) !important;
+  border-color: rgba(255,255,255,0.10) !important;
+  box-shadow: none !important;
+}
+
+body[data-theme="dark"] .MuiIconButton-root { color: #e8eaed !important; }
+body[data-theme="dark"] .MuiIconButton-root:hover { background: rgba(255,255,255,0.08) !important; }
+body[data-theme="dark"] .MuiIconButton-root.Mui-disabled { color: rgba(255,255,255,0.30) !important; }
+
+body[data-theme="dark"] .MuiFab-root { background-color: #6ba6ff !important; color: #0d0f18 !important; }
+body[data-theme="dark"] .MuiFab-root:hover { background-color: #4f93ff !important; }
+
+/* ---------- Chips / Badges ---------- */
+body[data-theme="dark"] .MuiChip-root {
+  background-color: rgba(255,255,255,0.08) !important;
+  color: #e8eaed !important;
+  border-color: rgba(255,255,255,0.12) !important;
+}
+body[data-theme="dark"] .MuiChip-colorPrimary { background-color: rgba(107,166,255,0.22) !important; color: #cfe0ff !important; }
+body[data-theme="dark"] .MuiChip-colorSecondary { background-color: rgba(245,246,248,0.18) !important; color: #f5f6f8 !important; }
+body[data-theme="dark"] .MuiChip-deleteIcon { color: #9aa0a6 !important; }
+body[data-theme="dark"] .MuiChip-deleteIcon:hover { color: #f5f6f8 !important; }
+body[data-theme="dark"] .MuiBadge-colorPrimary .MuiBadge-badge { background-color: #6ba6ff !important; color: #0d0f18 !important; }
+
+/* ---------- Tabs ---------- */
+body[data-theme="dark"] .MuiTab-root { color: #9aa0a6 !important; }
+body[data-theme="dark"] .MuiTab-root.Mui-selected { color: #6ba6ff !important; }
+body[data-theme="dark"] .MuiTabs-indicator { background-color: #6ba6ff !important; }
+
+/* ---------- Listas / Tabelas ---------- */
+body[data-theme="dark"] .MuiListItem-root { color: #e8eaed !important; }
+body[data-theme="dark"] .MuiListItem-root:hover,
+body[data-theme="dark"] .MuiListItemButton-root:hover { background-color: rgba(255,255,255,0.05) !important; }
+body[data-theme="dark"] .MuiListItemIcon-root { color: #9aa0a6 !important; }
+
+body[data-theme="dark"] .MuiTableCell-root { color: #e8eaed !important; border-bottom-color: rgba(255,255,255,0.08) !important; }
+body[data-theme="dark"] .MuiTableCell-head { color: #f5f6f8 !important; background-color: #0d0f18 !important; font-weight: 600; }
+body[data-theme="dark"] .MuiTableRow-root:hover { background-color: rgba(255,255,255,0.04) !important; }
+
+/* ---------- Switch / Checkbox / Radio ---------- */
+body[data-theme="dark"] .MuiSwitch-track { background-color: rgba(255,255,255,0.28) !important; opacity: 1 !important; }
+body[data-theme="dark"] .MuiSwitch-thumb { background-color: #f5f6f8 !important; }
+body[data-theme="dark"] .MuiSwitch-colorPrimary.Mui-checked { color: #6ba6ff !important; }
+body[data-theme="dark"] .MuiSwitch-colorPrimary.Mui-checked + .MuiSwitch-track { background-color: #6ba6ff !important; opacity: 0.7 !important; }
+body[data-theme="dark"] .MuiCheckbox-root,
+body[data-theme="dark"] .MuiRadio-root { color: #9aa0a6 !important; }
+body[data-theme="dark"] .MuiCheckbox-root.Mui-checked,
+body[data-theme="dark"] .MuiRadio-root.Mui-checked { color: #6ba6ff !important; }
+body[data-theme="dark"] .MuiFormControlLabel-label { color: #e8eaed !important; }
+body[data-theme="dark"] .MuiFormControlLabel-label.Mui-disabled { color: rgba(255,255,255,0.35) !important; }
+
+/* ---------- Links ---------- */
+body[data-theme="dark"] a,
+body[data-theme="dark"] .MuiLink-root { color: #6ba6ff !important; }
+body[data-theme="dark"] a:hover,
+body[data-theme="dark"] .MuiLink-root:hover { color: #9fc2ff !important; }
+
+/* ---------- Tooltip ---------- */
+body[data-theme="dark"] .MuiTooltip-tooltip { background-color: #0d0f18 !important; color: #f5f6f8 !important; border: 1px solid rgba(255,255,255,0.12) !important; }
+body[data-theme="dark"] .MuiTooltip-arrow { color: #0d0f18 !important; }
+
+/* ---------- Alerts ---------- */
+body[data-theme="dark"] .MuiAlert-standardSuccess { background-color: rgba(46,204,113,0.15) !important; color: #b6efc8 !important; }
+body[data-theme="dark"] .MuiAlert-standardWarning { background-color: rgba(241,196,15,0.15) !important; color: #f5d97a !important; }
+body[data-theme="dark"] .MuiAlert-standardError   { background-color: rgba(231,76,60,0.18)  !important; color: #ffb3a8 !important; }
+body[data-theme="dark"] .MuiAlert-standardInfo    { background-color: rgba(107,166,255,0.18) !important; color: #cfe0ff !important; }
+body[data-theme="dark"] .MuiAlert-root .MuiAlert-icon { color: inherit !important; }
+
+/* ---------- Skeleton ---------- */
+body[data-theme="dark"] .MuiSkeleton-root { background-color: rgba(255,255,255,0.08) !important; }
+
+/* ---------- Drawer / Dialog ---------- */
+body[data-theme="dark"] .MuiDrawer-paper { background-color: #0d0f18 !important; color: #e8eaed !important; border-right: 1px solid rgba(255,255,255,0.08); }
+body[data-theme="dark"] .MuiDialogTitle-root { color: #f5f6f8 !important; }
+body[data-theme="dark"] .MuiDialogContentText-root { color: #e8eaed !important; }
+body[data-theme="dark"] .MuiDialogActions-root { background-color: #0d0f18 !important; border-top: 1px solid rgba(255,255,255,0.08) !important; }
+
+/* ---------- Scrollbar ---------- */
+body[data-theme="dark"] *::-webkit-scrollbar { width: 10px; height: 10px; }
+body[data-theme="dark"] *::-webkit-scrollbar-track { background: transparent; }
+body[data-theme="dark"] *::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 8px; }
+body[data-theme="dark"] *::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.30); }
+
+/* ---------- Foco visível ---------- */
+body[data-theme="dark"] :focus-visible {
+  outline: 2px solid #6ba6ff !important;
+  outline-offset: 2px !important;
+}

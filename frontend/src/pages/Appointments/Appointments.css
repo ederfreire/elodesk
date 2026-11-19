@@ -1,0 +1,99 @@
+.appointments-calendar-paper {
+  padding: 20px;
+}
+
+.appointments-calendar-heading {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  gap: 12px;
+}
+
+.appointments-calendar-legend {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 12px;
+  gap: 12px;
+}
+
+.appointments-calendar-legend span {
+  align-items: center;
+  display: inline-flex;
+  gap: 5px;
+}
+
+.appointments-calendar-legend i {
+  border-radius: 50%;
+  display: inline-block;
+  height: 9px;
+  width: 9px;
+}
+
+.appointments-calendar-legend .confirmed {
+  background-color: #1a73e8;
+}
+
+.appointments-calendar-legend .completed {
+  background-color: #188038;
+}
+
+.appointments-calendar-legend .cancelled {
+  background-color: #80868b;
+}
+
+.appointments-calendar-legend .no-show {
+  background-color: #e37400;
+}
+
+.appointments-calendar-loading {
+  align-items: center;
+  display: flex;
+  height: 660px;
+  justify-content: center;
+}
+
+.appointments-calendar .rbc-toolbar {
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.appointments-calendar .rbc-toolbar button {
+  border-radius: 4px;
+  padding: 6px 10px;
+}
+
+.appointments-calendar .rbc-toolbar button:active,
+.appointments-calendar .rbc-toolbar button.rbc-active {
+  background-color: #e8f0fe;
+  border-color: #1a73e8;
+  color: #174ea6;
+}
+
+.appointments-calendar .rbc-event {
+  border: 0;
+  overflow: hidden;
+}
+
+.appointments-calendar .rbc-today {
+  background-color: #f1f6fe;
+}
+
+@media (max-width: 600px) {
+  .appointments-calendar-paper {
+    padding: 12px;
+  }
+
+  .appointments-calendar .rbc-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .appointments-calendar .rbc-toolbar-label {
+    order: -1;
+    padding: 4px 0;
+  }
+}

@@ -1,0 +1,129 @@
+*{
+	padding: 0;
+	margin: 0;
+	box-sizing: border-box;
+}
+
+body{
+    font-family: 'Poppins', sans-serif;
+    overflow: hidden;
+}
+
+.wave{
+	position: fixed;
+	bottom: 0;
+	left: 0;
+	height: 100%;
+	z-index: -1;
+}
+
+.container{
+    width: 100vw;
+    height: 100vh;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-gap :7rem;
+    padding: 0 2rem;
+}
+
+.img{
+	display: flex;
+	justify-content: flex-end;
+	align-items: center;
+	width: 100%;
+}
+
+
+/* ==========================================
+   CSS PARA LARGURA TOTAL APENAS EM PÁGINAS AUTENTICADAS
+   VERSÃO CORRIGIDA - PROTEÇÃO ROBUSTA PARA MENUS
+   Substitua TODO o conteúdo do style.css por este
+   ========================================== */
+
+/* APLICAR LARGURA TOTAL EM TODAS AS PÁGINAS AUTENTICADAS */
+.logged-in-layout .MuiContainer-root:not(.login-container):not(.signup-container) {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  max-width: none !important;
+  width: 100% !important;
+}
+
+.logged-in-layout main {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.logged-in-layout .MuiPaper-root:not(.MuiMenu-paper):not(.MuiPopover-paper):not(.MuiDialog-paper) {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+/* Garantir que tabelas ocupem toda a largura */
+.logged-in-layout .MuiTableContainer-root {
+  margin: 0 !important;
+  width: 100% !important;
+}
+
+/* Garantir que elementos com container não tenham padding lateral */
+.logged-in-layout div[class*="container"]:not(.login-container):not(.signup-container) {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+/* ==========================================
+ NOTA: Regras anteriores que forçavam
+ position/left/right/transform/margin nos
+ popovers/menus do MUI foram removidas pois
+ quebravam o posicionamento calculado inline
+ pelo MUI (menu do botão "+" abria fora da tela,
+ botões pareciam "sumir"). O MUI já cuida do
+ posicionamento e tamanho desses elementos.
+ ========================================== */
+
+/* Páginas específicas que precisam de padding */
+.logged-in-layout .page-with-padding {
+  padding: 0 16px !important;
+}
+
+.logged-in-layout .content-wrapper {
+  padding: 16px 0 !important;
+}
+
+@media screen and (max-width: 1050px){
+	.container{
+		grid-gap: 5rem;
+	}
+}
+
+@media screen and (max-width: 1000px){
+	form{
+		width: 290px;
+	}
+
+	.login-content h2{
+        font-size: 2.4rem;
+        margin: 8px 0;
+	}
+
+	.img img{
+		width: 400px;
+	}
+}
+
+@media screen and (max-width: 900px){
+	.container{
+		grid-template-columns: 1fr;
+	}
+
+	.img{
+		display: none;
+	}
+
+	.wave{
+		display: none;
+	}
+
+	.login-content{
+		justify-content: center;
+	}
+}

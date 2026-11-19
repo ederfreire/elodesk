@@ -1,0 +1,26 @@
+// database/migrations/YYYYMMDDHHMMSS-update-flow-campaigns-phrase.ts
+import { QueryInterface, DataTypes } from 'sequelize';
+
+export default {
+  up: async (queryInterface: QueryInterface) => {
+    try {
+    // Alterar o tipo da coluna phrase de STRING para TEXT
+    // para suportar JSON maiores com múltiplas frases
+    await queryInterface.changeColumn('FlowCampaigns', 'phrase', {
+      type: DataTypes.TEXT,
+      allowNull: false
+    });
+
+      } catch (err) {
+    }
+  },
+
+  down: async (queryInterface: QueryInterface) => {
+    // Reverter para STRING (pode causar perda de dados se houver JSONs muito grandes)
+    await queryInterface.changeColumn('FlowCampaigns', 'phrase', {
+      type: DataTypes.STRING,
+      allowNull: false
+    });
+
+  }
+};

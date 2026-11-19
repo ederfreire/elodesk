@@ -1,0 +1,1142 @@
+import React, { useContext, useEffect, useReducer, useState } from "react";
+import { Link as RouterLink, useLocation } from "react-router-dom";
+import { makeStyles, useTheme } from "@material-ui/core/styles";
+import useHelps from "../hooks/useHelps";
+import ListItem from "@material-ui/core/ListItem";
+import ListItemIcon from "@material-ui/core/ListItemIcon";
+import ListItemText from "@material-ui/core/ListItemText";
+import ListSubheader from "@material-ui/core/ListSubheader";
+import Divider from "@material-ui/core/Divider";
+import Avatar from "@material-ui/core/Avatar";
+import Badge from "@material-ui/core/Badge";
+import Collapse from "@material-ui/core/Collapse";
+import List from "@material-ui/core/List";
+import Tooltip from "@material-ui/core/Tooltip";
+import Typography from "@material-ui/core/Typography";
+
+// Icones do menu pelo Lucide. Os nomes exportados sao os mesmos que este
+// arquivo ja usava, entao nenhum ponto de uso abaixo precisou mudar.
+import {
+  AccountBalanceWalletIcon,
+  AccountTreeOutlinedIcon,
+  AllInclusive,
+  AnnouncementIcon,
+  Assessment,
+  AttachFile,
+  BusinessIcon,
+  CakeIcon,
+  CodeRoundedIcon,
+  ContactPhoneOutlinedIcon,
+  Dashboard,
+  DashboardOutlinedIcon,
+  Description,
+  DeviceHubOutlined,
+  EventAvailableIcon,
+  ExpandLessIcon,
+  ExpandMoreIcon,
+  FlashOnIcon,
+  ForumIcon,
+  GridOn,
+  HelpOutlineIcon,
+  LocalAtmIcon,
+  LocalOfferIcon,
+  MonitorHeartIcon,
+  PeopleAltOutlinedIcon,
+  PhoneIcon,
+  PhonelinkSetup,
+  Schedule,
+  SettingsOutlinedIcon,
+  ShapeLine,
+  SwapHorizIcon,
+  SyncAltIcon,
+  ViewKanban,
+  Webhook,
+  WhatsAppIcon,
+} from "../components/MenuIcons";
+import useMediaQuery from "@material-ui/core/useMediaQuery";
+
+import { WhatsAppsContext } from "../context/WhatsApp/WhatsAppsContext";
+import { AuthContext } from "../context/Auth/AuthContext";
+import { useActiveMenu } from "../context/ActiveMenuContext";
+
+import { Can } from "../components/Can";
+
+import { isArray } from "lodash";
+import api from "../services/api";
+import toastError from "../errors/toastError";
+import usePlans from "../hooks/usePlans";
+import useVersion from "../hooks/useVersion";
+import { i18n } from "../translate/i18n";
+
+import useCompanySettings from "../hooks/useSettings/companySettings";
+
+const useStyles = makeStyles((theme) => ({
+  listItem: {
+    height: "44px",
+    width: "auto",
+    borderRadius: "10px",
+    margin: "2px 8px",
+    padding: "8px 12px",
+    "&:hover $iconHoverActive": {
+      backgroundColor: theme.palette.primary.main,
+      color: "#fff",
+      transform: "scale(1.05)",
+    },
+    "&:hover $listItemText": {
+      color: theme.palette.primary.main,
+      fontWeight: 600,
+    },
+    "&:hover": {
+      backgroundColor: theme.mode === "light"
+        ? `${theme.palette.primary.main}08`
+        : "rgba(255,255,255,0.04)",
+    },
+    transition: "all 0.2s ease",
+  },
+
+  listItemText: {
+    fontSize: "14px",
+    color: theme.mode === "light" ? "#666" : "#a0aec0",
+    transition: "color 0.2s ease",
+    fontWeight: 500,
+    "& .MuiTypography-root": {
+      fontFamily: "'Inter', 'Roboto', sans-serif",
+    }
+  },
+
+  avatarActive: {
+    backgroundColor: "transparent",
+  },
+
+  avatarHover: {
+    backgroundColor: "transparent",
+  },
+
+  iconHoverActive: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: "10px",
+    height: 36,
+    width: 36,
+    backgroundColor:
+      theme.mode === "light"
+        ? "rgba(120,120,120,0.08)"
+        : "rgba(255,255,255,0.06)",
+    color: theme.mode === "light" ? "#666" : "#a0aec0",
+    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+    "&:hover, &.active": {
+      backgroundColor: theme.palette.primary.main,
+      color: "#fff",
+      boxShadow: `0 4px 12px ${theme.palette.primary.main}40`,
+    },
+    "& .MuiSvgIcon-root": {
+      fontSize: "1.3rem",
+      transition: "transform 0.2s ease",
+    },
+    "&:hover .MuiSvgIcon-root": {
+      transform: "scale(1.1)",
+    }
+  },
+
+  // Badge melhorado mas mantendo funcionalidade
+  badge: {
+    "& .MuiBadge-badge": {
+      backgroundColor: "#ef4444",
+      color: "#fff",
+      fontSize: "0.75rem",
+      fontWeight: 600,
+      animation: "$pulse 2s infinite",
+    }
+  },
+
+  "@keyframes pulse": {
+    "0%, 100%": {
+      opacity: 1,
+    },
+    "50%": {
+      opacity: 0.7,
+    }
+  },
+
+  // Melhorias para submenus mantendo estrutura original
+  submenuContainer: {
+    backgroundColor: theme.mode === "light"
+      ? "rgba(0, 0, 0, 0.02)"
+      : "rgba(255, 255, 255, 0.015)",
+    borderLeft: `2px solid ${theme.palette.primary.main}30`,
+    marginLeft: "28px",
+  },
+
+  // Tooltip melhorado
+  customTooltip: {
+    backgroundColor: theme.mode === "light" ? "#1e293b" : "#374151",
+    color: "#fff",
+    fontSize: "0.875rem",
+    fontWeight: 500,
+    borderRadius: "8px",
+    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+    "& .MuiTooltip-arrow": {
+      color: theme.mode === "light" ? "#1e293b" : "#374151",
+    }
+  },
+
+  // Versão com destaque sutil
+  versionContainer: {
+    textAlign: "center",
+    padding: "10px",
+    color: theme.mode === "light" ? theme.palette.primary.main : "#555",
+    fontSize: "12px",
+    fontWeight: "bold",
+    borderTop: `1px solid ${theme.mode === "light" ? "#f0f0f0" : "rgba(255,255,255,0.05)"}`,
+    marginTop: "auto",
+  },
+
+  // Seções de administração com destaque sutil
+  adminSection: {
+    "& .MuiListSubheader-root": {
+      color: theme.palette.primary.main, // Usa cor do tema
+      fontSize: "0.875rem",
+      fontWeight: 600,
+      textTransform: "uppercase",
+      letterSpacing: "0.5px",
+    }
+  },
+
+  // Efeitos suaves para expand/collapse
+  expandIcon: {
+    transition: "transform 0.3s ease",
+    color: theme.palette.primary.main, // Usa cor do tema
+    "&.expanded": {
+      transform: "rotate(180deg)",
+    }
+  },
+
+  // Menu container com melhorias sutis
+  menuContainer: {
+    overflowY: "auto",
+    "&::-webkit-scrollbar": {
+      width: "6px",
+    },
+    "&::-webkit-scrollbar-track": {
+      background: "transparent",
+    },
+    "&::-webkit-scrollbar-thumb": {
+      background: theme.mode === "light"
+        ? "rgba(0, 0, 0, 0.1)"
+        : "rgba(255, 255, 255, 0.1)",
+      borderRadius: "3px",
+      "&:hover": {
+        background: theme.mode === "light"
+          ? "rgba(0, 0, 0, 0.2)"
+          : "rgba(255, 255, 255, 0.2)",
+      }
+    },
+  },
+
+  // Estado ativo melhorado mantendo funcionalidade original
+  activeItem: {
+    "& $iconHoverActive": {
+      backgroundColor: theme.palette.primary.main, // Usa cor do tema
+      color: "#fff",
+    },
+    "& $listItemText": {
+      color: theme.palette.primary.main, // Usa cor do tema
+      fontWeight: 700,
+    }
+  }
+}));
+
+function ListItemLink(props) {
+  const { icon, primary, to, tooltip, showBadge } = props;
+  const classes = useStyles();
+  const { activeMenu } = useActiveMenu();
+  const location = useLocation();
+  const isActive = activeMenu === to || location.pathname === to;
+
+  const renderLink = React.useMemo(
+    () =>
+      React.forwardRef((itemProps, ref) => (
+        <RouterLink to={to} ref={ref} {...itemProps} />
+      )),
+    [to]
+  );
+
+  const ConditionalTooltip = ({ children, tooltipEnabled }) =>
+    tooltipEnabled ? (
+      <Tooltip title={primary} placement="right">
+        {children}
+      </Tooltip>
+    ) : (
+      children
+    );
+
+  return (
+    <ConditionalTooltip tooltipEnabled={!!tooltip}>
+      <li>
+        <ListItem button component={renderLink} className={classes.listItem}>
+          {icon ? (
+            <ListItemIcon>
+              {showBadge ? (
+                <Badge
+                  badgeContent="!"
+                  color="error"
+                  overlap="circular"
+                  className={classes.badge}
+                >
+                  <Avatar
+                    className={`${classes.iconHoverActive} ${isActive ? "active" : ""
+                      }`}
+                  >
+                    {icon}
+                  </Avatar>
+                </Badge>
+              ) : (
+                <Avatar
+                  className={`${classes.iconHoverActive} ${isActive ? "active" : ""
+                    }`}
+                >
+                  {icon}
+                </Avatar>
+              )}
+            </ListItemIcon>
+          ) : null}
+          <ListItemText
+            primary={
+              <Typography className={classes.listItemText}>
+                {primary}
+              </Typography>
+            }
+          />
+        </ListItem>
+      </li>
+    </ConditionalTooltip>
+  );
+}
+
+const reducer = (state, action) => {
+  if (action.type === "LOAD_CHATS") {
+    const chats = action.payload;
+    const newChats = [];
+
+    if (isArray(chats)) {
+      chats.forEach((chat) => {
+        const chatIndex = state.findIndex((u) => u.id === chat.id);
+        if (chatIndex !== -1) {
+          state[chatIndex] = chat;
+        } else {
+          newChats.push(chat);
+        }
+      });
+    }
+
+    return [...state, ...newChats];
+  }
+
+  if (action.type === "UPDATE_CHATS") {
+    const chat = action.payload;
+    const chatIndex = state.findIndex((u) => u.id === chat.id);
+
+    if (chatIndex !== -1) {
+      state[chatIndex] = chat;
+      return [...state];
+    } else {
+      return [chat, ...state];
+    }
+  }
+
+  if (action.type === "DELETE_CHAT") {
+    const chatId = action.payload;
+
+    const chatIndex = state.findIndex((u) => u.id === chatId);
+    if (chatIndex !== -1) {
+      state.splice(chatIndex, 1);
+    }
+    return [...state];
+  }
+
+  if (action.type === "RESET") {
+    return [];
+  }
+
+  if (action.type === "CHANGE_CHAT") {
+    const changedChats = state.map((chat) => {
+      if (chat.id === action.payload.chat.id) {
+        return action.payload.chat;
+      }
+      return chat;
+    });
+    return changedChats;
+  }
+};
+
+const MainListItems = ({ collapsed, drawerClose }) => {
+  const theme = useTheme();
+  const classes = useStyles();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const { whatsApps } = useContext(WhatsAppsContext);
+  const { user, socket } = useContext(AuthContext);
+
+  const { setActiveMenu } = useActiveMenu();
+  const location = useLocation();
+
+  const [connectionWarning, setConnectionWarning] = useState(false);
+  // Nome da área de cursos, definido pelo admin do SaaS na própria página.
+  // O menu passa a refletir o mesmo nome (ex.: "Universidade QP").
+  const [coursesLabel, setCoursesLabel] = useState("");
+  const [openCampaignSubmenu, setOpenCampaignSubmenu] = useState(false);
+  const [openDashboardSubmenu, setOpenDashboardSubmenu] = useState(false);
+  const [showCampaigns, setShowCampaigns] = useState(false);
+  const [showUtmLinks, setShowUtmLinks] = useState(false);
+  const [showSalesAgents, setShowSalesAgents] = useState(false);
+  const [showKanban, setShowKanban] = useState(false);
+  const [showOpenAi, setShowOpenAi] = useState(false);
+  const [showIntegrations, setShowIntegrations] = useState(false);
+  const [showWavoipCall, setShowWavoipCall] = useState(false);
+
+  // novas features
+  const [showSchedules, setShowSchedules] = useState(false);
+  const [showInternalChat, setShowInternalChat] = useState(false);
+  const [showExternalApi, setShowExternalApi] = useState(false);
+  const [showFlows, setShowFlows] = useState(true);
+  // URA de voz do WhatsApp Plus: só com o módulo de ligações no plano.
+  const [showWacalls, setShowWacalls] = useState(false);
+  const [showContacts, setShowContacts] = useState(true);
+  const [showDashboard, setShowDashboard] = useState(true);
+  const [showRealTime, setShowRealTime] = useState(true);
+  
+  const [invisible, setInvisible] = useState(true);
+  const [pageNumber, setPageNumber] = useState(1);
+  const [searchParam] = useState("");
+  const [chats, dispatch] = useReducer(reducer, []);
+  const [version, setVersion] = useState(false);
+  const [managementHover, setManagementHover] = useState(false);
+  const [campaignHover, setCampaignHover] = useState(false);
+  const { list } = useHelps(); // INSERIR
+  const [hasHelps, setHasHelps] = useState(false);
+
+  const [openFlowSubmenu, setOpenFlowSubmenu] = useState(false);
+  const [flowHover, setFlowHover] = useState(false);
+
+  const { get: getSetting } = useCompanySettings();
+  const [showWallets, setShowWallets] = useState(false);
+
+  const isFlowbuilderRouteActive =
+    location.pathname.startsWith("/flowbuilders") || location.pathname.startsWith("/voice-ivr");
+
+  useEffect(() => {
+    // Nome da área de cursos definido pelo admin, para o menu exibir o mesmo
+    // rótulo da página. Falha silenciosa: cai no padrão traduzido.
+    let ativo = true;
+    api.get("/courses/page-config")
+      .then(({ data }) => {
+        if (!ativo || !data?.title) return;
+        // O nome vem por idioma ({pt, es, en}); mostramos o do usuário e, se
+        // estiver em branco, o português. Formato antigo (texto) também vale.
+        const bruto = (i18n.language || "pt").toLowerCase().split("-")[0];
+        const t = data.title;
+        const nome = typeof t === "string" ? t : (t[bruto] || t.pt || t.es || t.en || "");
+        if (nome) setCoursesLabel(nome);
+      })
+      .catch(() => {});
+    return () => { ativo = false; };
+  }, []);
+
+  useEffect(() => {
+    // INSERIR ESSE EFFECT INTEIRO
+    async function checkHelps() {
+      const helps = await list();
+      setHasHelps(helps.length > 0);
+    }
+    checkHelps();
+  }, []);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const setting = await getSetting(
+          {
+            "column": "DirectTicketsToWallets"
+          }
+        );
+
+        setShowWallets(setting.DirectTicketsToWallets);
+
+      } catch (err) {
+        toastError(err);
+      }
+    }
+
+    fetchSettings();
+  }, [setShowWallets]);
+
+  const isManagementActive =
+    location.pathname === "/" ||
+    location.pathname.startsWith("/reports") ||
+    location.pathname.startsWith("/moments");
+
+  const isCampaignRouteActive =
+    location.pathname === "/campaigns";
+
+  useEffect(() => {
+    if (location.pathname.startsWith("/tickets")) {
+      setActiveMenu("/tickets");
+    } else {
+      setActiveMenu("");
+    }
+  }, [location, setActiveMenu]);
+
+  const { getPlanCompany } = usePlans();
+
+  const { getVersion } = useVersion();
+
+  useEffect(() => {
+    async function fetchVersion() {
+      const _version = await getVersion();
+      setVersion(_version.version);
+    }
+    fetchVersion();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    dispatch({ type: "RESET" });
+    setPageNumber(1);
+  }, [searchParam]);
+
+  useEffect(() => {
+    async function fetchData() {
+      const companyId = user.companyId;
+
+      // Mesmo caso do layout: sem companyId a URL fica
+      // "/companies/listPlan/undefined" e volta 400. Aqui era pior, porque as
+      // deps eram [] — o efeito rodava UMA vez, com o valor indefinido, e
+      // nunca mais. Quando o companyId chegava, ninguem buscava de novo, e as
+      // permissoes do menu ficavam todas em false.
+      if (!companyId) return;
+
+      try {
+        const planConfigs = await getPlanCompany(undefined, companyId);
+
+        setShowCampaigns(planConfigs.plan.useCampaigns);
+        setShowUtmLinks(planConfigs.plan.useUtmLinks !== false);
+        setShowSalesAgents(planConfigs.plan.useSalesAgents !== false);
+      setShowKanban(planConfigs.plan.useKanban);
+      setShowOpenAi(planConfigs.plan.useOpenAi);
+      setShowIntegrations(planConfigs.plan.useIntegrations);
+      setShowSchedules(planConfigs.plan.useSchedules);
+      setShowInternalChat(planConfigs.plan.useInternalChat);
+      setShowExternalApi(planConfigs.plan.useExternalApi);
+      setShowWavoipCall(planConfigs.plan.wavoip);
+      setShowFlows(planConfigs.plan.useFlows !== false);
+      setShowWacalls(!!planConfigs.plan.useWacalls);
+      setShowContacts(planConfigs.plan.useContacts !== false);
+      setShowDashboard(planConfigs.plan.useDashboard !== false);
+        setShowRealTime(planConfigs.plan.useRealTime !== false);
+      } catch (err) {
+        // Falha ao ler o plano nao pode derrubar o menu inteiro.
+        console.error("[Menu] Erro ao carregar plano:", err?.message || err);
+      }
+    }
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user.companyId]);
+
+  // showInternalChat entra nas dependências: ele começa como false e só vira
+  // true depois que o plano é carregado. Sem isso a busca rodaria uma única
+  // vez, antes do plano chegar, e nunca mais — o contador de mensagens não
+  // lidas do chat interno ficaria sempre zerado em quem TEM o recurso.
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      fetchChats();
+    }, 500);
+    return () => clearTimeout(delayDebounceFn);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParam, pageNumber, showInternalChat]);
+
+  useEffect(() => {
+    if (user.id && socket && typeof socket.on === 'function') {
+      const companyId = user.companyId;
+
+      const onCompanyChatMainListItems = (data) => {
+        if (data.action === "new-message") {
+          dispatch({ type: "CHANGE_CHAT", payload: data });
+        }
+        if (data.action === "update") {
+          dispatch({ type: "CHANGE_CHAT", payload: data });
+        }
+      };
+
+      const eventName = `company-${companyId}-chat`;
+
+      socket.on(eventName, onCompanyChatMainListItems);
+
+      return () => {
+        if (socket && typeof socket.off === 'function') {
+          socket.off(eventName, onCompanyChatMainListItems);
+        }
+      };
+    }
+  }, [socket, user.id, user.companyId]);
+
+  useEffect(() => {
+    let unreadsCount = 0;
+    if (chats.length > 0) {
+      for (let chat of chats) {
+        for (let chatUser of chat.users) {
+          if (chatUser.userId === user.id) {
+            unreadsCount += chatUser.unreads;
+          }
+        }
+      }
+    }
+    if (unreadsCount > 0) {
+      setInvisible(false);
+    } else {
+      setInvisible(true);
+    }
+  }, [chats, user.id]);
+
+  // useEffect(() => {
+  //   if (localStorage.getItem("cshow")) {
+  //     setShowCampaigns(true);
+  //   }
+  // }, []);
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      if (whatsApps.length > 0) {
+        const offlineWhats = whatsApps.filter((whats) => {
+          return (
+            whats.status === "qrcode" ||
+            whats.status === "PAIRING" ||
+            whats.status === "DISCONNECTED" ||
+            whats.status === "TIMEOUT" ||
+            whats.status === "OPENING"
+          );
+        });
+        if (offlineWhats.length > 0) {
+          setConnectionWarning(true);
+        } else {
+          setConnectionWarning(false);
+        }
+      }
+    }, 2000);
+    return () => clearTimeout(delayDebounceFn);
+  }, [whatsApps]);
+
+  const fetchChats = async () => {
+    // Plano sem chat interno: nem chama. A rota /chats é protegida por
+    // isPlanFeatureEnabled("useInternalChat") e devolve 403. Como esta função
+    // roda meio segundo depois do menu montar em TODAS as páginas, o erro
+    // aparecia como um aviso vermelho de "recurso indisponível" em telas que
+    // não têm nada a ver com chat — e derrubava o usuário para o Financeiro.
+    if (!showInternalChat) return;
+
+    try {
+      const { data } = await api.get("/chats/", {
+        params: { searchParam, pageNumber },
+      });
+      dispatch({ type: "LOAD_CHATS", payload: data.records });
+    } catch (err) {
+      toastError(err);
+    }
+  };
+
+  return (
+    <div onClick={drawerClose}>
+      {(user.showDashboard === "enabled" || user.allowRealTime === "enabled") && (showDashboard || showRealTime) && (
+          <>
+            <Tooltip
+              title={collapsed ? i18n.t("mainDrawer.listItems.management") : ""}
+              placement="right"
+            >
+              <ListItem
+                dense
+                button
+                onClick={() => setOpenDashboardSubmenu((prev) => !prev)}
+                onMouseEnter={() => setManagementHover(true)}
+                onMouseLeave={() => setManagementHover(false)}
+              >
+                <ListItemIcon>
+                  <Avatar
+                    className={`${classes.iconHoverActive} ${isManagementActive || managementHover ? "active" : ""
+                      }`}
+                  >
+                    <Dashboard />
+                  </Avatar>
+                </ListItemIcon>
+                <ListItemText
+                  primary={
+                    <Typography className={classes.listItemText}>
+                      {i18n.t("mainDrawer.listItems.management")}
+                    </Typography>
+                  }
+                />
+                {openDashboardSubmenu ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+              </ListItem>
+            </Tooltip>
+            <Collapse
+              in={openDashboardSubmenu}
+              timeout="auto"
+              unmountOnExit
+              style={{
+                backgroundColor:
+                  theme.mode === "light"
+                    ? "rgba(120,120,120,0.1)"
+                    : "rgba(120,120,120,0.5)",
+              }}
+            >
+              {user.showDashboard === "enabled" && showDashboard && (
+                  <>
+                    <ListItemLink
+                      small
+                      to="/"
+                      primary="Dashboard"
+                      icon={<DashboardOutlinedIcon />}
+                      tooltip={collapsed}
+                    />
+                    <ListItemLink
+                      small
+                      to="/reports"
+                      primary={i18n.t("mainDrawer.listItems.reports")}
+                      icon={<Description />}
+                      tooltip={collapsed}
+                    />
+                    {/* Fechamento, Anuncios, Desempenho, Chamadas e FollowUP
+                        viraram abas dentro de /reports. As rotas antigas
+                        continuam no router, so sairam do menu. */}
+                  </>
+              )}
+              {user.allowRealTime === "enabled" && showRealTime && (
+                  <ListItemLink
+                    to="/moments"
+                    primary={i18n.t("mainDrawer.listItems.chatsTempoReal")}
+                    icon={<GridOn />}
+                    tooltip={collapsed}
+                  />
+              )}
+              {user.profile === "admin" && showWallets && (
+                <>
+                  <ListItemLink
+                    to="/wallets"
+                    primary={i18n.t("mainDrawer.listItems.wallets")}
+                    icon={<AccountBalanceWalletIcon />}
+                    tooltip={collapsed}
+                  />
+                </>
+              )}
+            </Collapse>
+          </>
+      )}
+      <ListItemLink
+        to="/tickets"
+        primary={i18n.t("mainDrawer.listItems.tickets")}
+        icon={<WhatsAppIcon />}
+        tooltip={collapsed}
+      />
+
+      <ListItemLink
+        to="/quick-messages"
+        primary={i18n.t("mainDrawer.listItems.quickMessages")}
+        icon={<FlashOnIcon />}
+        tooltip={collapsed}
+      />
+
+      <ListItemLink
+        to="/courses"
+        primary={coursesLabel || i18n.t("mainDrawer.listItems.courses", "Cursos")}
+        icon={<Description />}
+        tooltip={collapsed}
+      />
+
+      <ListItemLink
+        to="/template-manager"
+        primary="Templates Meta"
+        icon={<Description />}
+        tooltip={collapsed}
+      />
+
+      {user.showKanban === "enabled" && showKanban && (
+        <>
+          <ListItemLink
+            to="/kanban"
+            primary={i18n.t("mainDrawer.listItems.kanban")}
+            icon={<ViewKanban />}
+            tooltip={collapsed}
+          />
+          <ListItemLink
+            to="/kanban-boards"
+            primary={i18n.t("kanbanBoards.title")}
+            icon={<ViewKanban />}
+            tooltip={collapsed}
+          />
+        </>
+      )}
+
+      {user.showContacts === "enabled" && showContacts && (
+        <ListItemLink
+          to="/contacts"
+          primary={i18n.t("mainDrawer.listItems.contacts")}
+          icon={<ContactPhoneOutlinedIcon />}
+          tooltip={collapsed}
+        />
+      )}
+
+      {user.showSchedules === "enabled" && showSchedules && (
+        <>
+          <ListItemLink
+            to="/schedules"
+            primary={i18n.t("mainDrawer.listItems.schedules")}
+            icon={<Schedule />}
+            tooltip={collapsed}
+          />
+        </>
+      )}
+
+      <ListItemLink
+        to="/appointments"
+        primary={i18n.t("mainDrawer.listItems.appointmentServices", "Agendamento de serviços")}
+        icon={<EventAvailableIcon />}
+        tooltip={collapsed}
+      />
+
+      <ListItemLink
+        to="/tags"
+        primary={i18n.t("mainDrawer.listItems.tags")}
+        icon={<LocalOfferIcon />}
+        tooltip={collapsed}
+      />
+
+      {user.showInternalChat === "enabled" && showInternalChat && (
+        <>
+          <ListItemLink
+            to="/chats"
+            primary={i18n.t("mainDrawer.listItems.chats")}
+            icon={
+              <Badge color="secondary" variant="dot" invisible={invisible}>
+                <ForumIcon />
+              </Badge>
+            }
+            tooltip={collapsed}
+          />
+        </>
+      )}
+
+      <ListItemLink
+        to="/todolist"
+        primary={i18n.t("ToDoList")}
+        icon={<EventAvailableIcon />}
+        tooltip={collapsed}
+      />
+
+      {hasHelps && (
+        <ListItemLink
+          to="/helps"
+          primary={i18n.t("mainDrawer.listItems.helps")}
+          icon={<HelpOutlineIcon />}
+          tooltip={collapsed}
+        />
+      )}
+
+      {user?.showCampaign === "enabled" && showCampaigns && (
+        <ListItemLink
+          to="/campaigns"
+          primary={i18n.t("mainDrawer.listItems.campaigns")}
+          icon={<EventAvailableIcon />}
+          tooltip={collapsed}
+        />
+      )}
+
+      {showSalesAgents && (user?.profile === "admin" || user?.super || user?.showCampaign === "enabled") && (
+        <ListItemLink
+          to="/sales-agents"
+          primary={i18n.t("mainDrawer.listItems.salesAgents", "Agentes Comerciais")}
+          icon={<FlashOnIcon />}
+          tooltip={collapsed}
+        />
+      )}
+
+      {(showSalesAgents || showOpenAi) && (user?.profile === "admin" || user?.super || user?.showCampaign === "enabled") && (
+        <ListItemLink
+          to="/agent-templates"
+          primary={i18n.t("mainDrawer.listItems.agentTemplates", "Modelos de Agente")}
+          icon={<FlashOnIcon />}
+          tooltip={collapsed}
+        />
+      )}
+
+      {showUtmLinks && (user?.profile === "admin" || user?.super || user?.showCampaign === "enabled") && (
+        <ListItemLink
+          to="/utm-links"
+          primary={i18n.t("mainDrawer.listItems.utmLinks", "Links UTM")}
+          icon={<AllInclusive />}
+          tooltip={collapsed}
+        />
+      )}
+
+      {/* FLOWBUILDER */}
+      {user.showFlow === "enabled" && showFlows && (
+        <>
+          <Tooltip
+            title={
+              collapsed ? i18n.t("mainDrawer.listItems.campaigns") : ""
+            }
+            placement="right"
+          >
+            <ListItem
+              dense
+              button
+              onClick={() => setOpenFlowSubmenu((prev) => !prev)}
+              onMouseEnter={() => setFlowHover(true)}
+              onMouseLeave={() => setFlowHover(false)}
+            >
+              <ListItemIcon>
+                <Avatar
+                  className={`${classes.iconHoverActive} ${isFlowbuilderRouteActive || flowHover
+                    ? "active"
+                    : ""
+                    }`}
+                >
+                  <Webhook />
+                </Avatar>
+              </ListItemIcon>
+              <ListItemText
+                primary={
+                  <Typography className={classes.listItemText}>
+                    {i18n.t("mainDrawer.listItems.automations")}
+                  </Typography>
+                }
+              />
+              {openFlowSubmenu ? (
+                <ExpandLessIcon />
+              ) : (
+                <ExpandMoreIcon />
+              )}
+            </ListItem>
+          </Tooltip>
+
+          <Collapse
+            in={openFlowSubmenu}
+            timeout="auto"
+            unmountOnExit
+            style={{
+              backgroundColor:
+                theme.mode === "light"
+                  ? "rgba(120,120,120,0.1)"
+                  : "rgba(120,120,120,0.5)",
+            }}
+          >
+            <List dense component="div" disablePadding>
+              <ListItemLink
+                to="/flowbuilders"
+                primary={i18n.t("flowBuilder.conversationFlows")}
+                icon={<ShapeLine />}
+              />
+
+                <ListItemLink
+                  to="/plugins/floup"
+                  primary={i18n.t("mainDrawer.listItems.followUp")}
+                  icon={<Webhook />}
+                />
+
+              {showWacalls && user.profile === "admin" && (
+                <ListItemLink
+                  to="/voice-ivr"
+                  primary={i18n.t("voiceIvr.titulo")}
+                  icon={<PhoneIcon />}
+                />
+              )}
+
+            </List>
+          </Collapse>
+        </>
+      )}
+
+      {(user.profile === "admin" || user.allowConnections === "enabled") && (
+          <>
+            <Divider />
+            <ListSubheader inset>
+              {i18n.t("mainDrawer.listItems.administration")}
+            </ListSubheader>
+
+            {user.super && (
+              <ListItemLink
+                to="/announcements"
+                primary={i18n.t("mainDrawer.listItems.annoucements")}
+                icon={<AnnouncementIcon />}
+                tooltip={collapsed}
+              />
+            )}
+
+            {showExternalApi && user.profile === "admin" && (
+              <ListItemLink
+                to="/messages-api"
+                primary={i18n.t("mainDrawer.listItems.messagesAPI")}
+                icon={<CodeRoundedIcon />}
+                tooltip={collapsed}
+              />
+            )}
+
+            {user.profile === "admin" && (
+              <ListItemLink
+                to="/users"
+                primary={i18n.t("mainDrawer.listItems.users")}
+                icon={<PeopleAltOutlinedIcon />}
+                tooltip={collapsed}
+              />
+            )}
+
+
+            {user.profile === "admin" && (
+              <ListItemLink
+                to="/birthday-settings"
+                primary={i18n.t("mainDrawer.listItems.birthdaySettings")}
+                icon={<CakeIcon />}
+                tooltip={collapsed}
+              />
+            )}
+
+            {user.profile === "admin" && (
+              <ListItemLink
+                to="/queues"
+                primary={i18n.t("mainDrawer.listItems.queues")}
+                icon={<AccountTreeOutlinedIcon />}
+                tooltip={collapsed}
+              />
+            )}
+
+            {user.profile === "admin" && (
+              <ListItemLink
+                to="/files"
+                primary={i18n.t("mainDrawer.listItems.files")}
+                icon={<AttachFile />}
+                tooltip={collapsed}
+              />
+            )}
+
+            {user.showOpenAi === "enabled" && showOpenAi && user.profile === "admin" && (
+              <ListItemLink
+                to="/prompts"
+                primary={i18n.t("mainDrawer.listItems.prompts")}
+                icon={<AllInclusive />}
+                tooltip={collapsed}
+              />
+            )}
+
+            {user.showIntegrations === "enabled" && showIntegrations && user.profile === "admin" && (
+              <ListItemLink
+                to="/queue-integration"
+                primary={i18n.t("mainDrawer.listItems.queueIntegration")}
+                icon={<DeviceHubOutlined />}
+                tooltip={collapsed}
+              />
+            )}
+
+
+
+            {(user.profile === "admin" || user.allowConnections === "enabled") && (
+              <ListItemLink
+                to="/connections"
+                primary={i18n.t("mainDrawer.listItems.connections")}
+                icon={<SyncAltIcon />}
+                showBadge={connectionWarning}
+                tooltip={collapsed}
+              />
+            )}
+            {/* Gerenciador de grupos: existia so no menu suspenso, entao no
+                mobile nao havia como chegar nele. Mesma condicao do suspenso. */}
+            {/* Google Agenda, Saude dos Numeros e Webhook Unificado Meta
+                saíram daqui: as tres ja sao acessiveis por Atendimentos >
+                Templates Meta. As rotas continuam no router. */}
+            {(user.allowConnections === "enabled" || user.super) && (
+              <ListItemLink
+                to="/group-manager"
+                primary={i18n.t("mainDrawer.listItems.groupManager")}
+                icon={<PeopleAltOutlinedIcon />}
+                tooltip={collapsed}
+              />
+            )}
+
+            {user.super && (
+              <ListItemLink
+                to="/allConnections"
+                primary={i18n.t("mainDrawer.listItems.allConnections")}
+                icon={<PhonelinkSetup />}
+                tooltip={collapsed}
+              />
+            )}
+            {user.profile === "admin" && !user.super && (
+              <ListItemLink
+                to="/financeiro"
+                primary={i18n.t("mainDrawer.listItems.myPlan")}
+                icon={<AccountBalanceWalletIcon />}
+                tooltip={collapsed}
+              />
+            )}
+            {user.super && (
+              <ListItemLink
+                to="/admin-financeiro"
+                primary={i18n.t("mainDrawer.listItems.adminFinanceiro")}
+                icon={<LocalAtmIcon />}
+                tooltip={collapsed}
+              />
+            )}
+            {user.profile === "admin" && (
+              <ListItemLink
+                to="/settings"
+                primary={i18n.t("mainDrawer.listItems.settings")}
+                icon={<SettingsOutlinedIcon />}
+                tooltip={collapsed}
+              />
+            )}
+            <ListItemLink
+              to="/account-switch"
+              primary={i18n.t("mainDrawer.appBar.user.switchAccount")}
+              icon={<SwapHorizIcon />}
+              tooltip={collapsed}
+            />
+            {user.super && (
+              <ListItemLink
+                to="/companies"
+                primary={i18n.t("mainDrawer.listItems.companies")}
+                icon={<BusinessIcon />}
+                tooltip={collapsed}
+              />
+            )}
+            {user.super && !isMobile && (
+              <ListItemLink
+                to="/stack-status"
+                primary="Status Stack"
+                icon={<MonitorHeartIcon />}
+                tooltip={collapsed}
+              />
+            )}
+          </>
+      )}
+      {!collapsed && (
+        <React.Fragment>
+          <Divider />
+          <Typography
+            className="app-version-label"
+            style={{
+              fontSize: "12px",
+              padding: "10px",
+              textAlign: "center",
+              fontWeight: "bold",
+            }}
+          >
+            {`${version}`}
+          </Typography>
+        </React.Fragment>
+      )}
+      <style>{`
+        @media (max-width: 600px) {
+          .app-version-label { display: none !important; }
+        }
+      `}</style>
+    </div>
+  );
+};
+
+export default MainListItems;

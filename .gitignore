@@ -1,0 +1,11 @@
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.exemple
+**/node_modules/
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+**/.DS_Store
+**/Thumbs.db
+/api_oficial.zip

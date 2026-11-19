@@ -1,0 +1,41 @@
+import { QueryInterface, DataTypes } from 'sequelize';
+
+export default {
+  up: async (queryInterface: QueryInterface) => {
+    const tableDesc = await queryInterface.describeTable("FlowCampaigns") as any;
+
+    // Adicionar nova coluna whatsappIds
+    if (!tableDesc["whatsappIds"]) {
+
+      await queryInterface.addColumn('FlowCampaigns', 'whatsappIds', {
+      type: DataTypes.TEXT,
+      allowNull: true
+    });
+
+    }
+
+    // Migrar dados existentes: converter whatsappId único para array
+    await queryInterface.sequelize.query(`
+      UPDATE "FlowCampaigns" 
+      SET "whatsappIds" = CASE 
+        WHEN "whatsappId" IS NOT NULL THEN CONCAT('[', "whatsappId", ']')
+        ELSE '[]'
+      END
+      WHERE "whatsappIds" IS NULL
+    `);
+
+    // Tornar a coluna obrigatória após migração
+    await queryInterface.changeColumn('FlowCampaigns', 'whatsappIds', {
+      type: DataTypes.TEXT,
+      allowNull: false,
+      defaultValue: '[]'
+    });
+
+  },
+
+  down: async (queryInterface: QueryInterface) => {
+    // Remover coluna whatsappIds
+    await queryInterface.removeColumn('FlowCampaigns', 'whatsappIds');
+    
+  }
+};

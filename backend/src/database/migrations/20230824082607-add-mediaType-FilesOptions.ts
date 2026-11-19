@@ -1,0 +1,19 @@
+import { QueryInterface, DataTypes } from "sequelize";
+
+module.exports = {
+  up: async (queryInterface: QueryInterface) => {
+    try {
+
+       queryInterface.addColumn("FilesOptions", "mediaType", {
+      type: DataTypes.STRING,
+      defaultValue: "",
+      allowNull: true
+    });
+     } catch (err: any) {
+    }
+  },
+
+  down: (queryInterface: QueryInterface) => {
+    return queryInterface.removeColumn("FilesOptions", "mediaType");
+  }
+};

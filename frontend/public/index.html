@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+
+    <!--
+      TIPOGRAFIA
+      O tema (src/App.js) sempre pediu 'Inter' em primeiro lugar, mas a fonte
+      nunca era carregada em lugar nenhum: sem @font-face, sem link, sem
+      pacote no package.json. O navegador entao pulava a Inter e caia no
+      fallback — no Windows, Segoe UI. Estes tres links resolvem isso.
+      preconnect vem antes para o handshake nao atrasar o primeiro texto.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap"
+    />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@300;400&display=swap"
+    />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700&display=swap"
+    />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/apple-touch-icon.png" />
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#4E93FF" />
+    <meta name="description" content="Aplicação" />
+    <title>App</title>
+
+    <!--
+      Barra de carregamento inicial.
+
+      IMPORTANTE: este bloco DEFINE window.startProgress/window.finishProgress.
+      O src/index.js chama window.finishProgress() logo depois que o React
+      termina de montar a tela. Builds antigos faziam essa chamada SEM
+      verificar se a função existe — quando o index.html publicado não a
+      definia, a exceção "window.finishProgress is not a function" estourava
+      dentro da finalização da renderização do React e derrubava a montagem
+      inteira: resultado, TELA BRANCA sem nenhuma pista pro usuário.
+
+      Definir a função aqui elimina esse risco de vez, independentemente de o
+      build ter ou não a verificação. Como bônus, dá um retorno visual
+      enquanto o bundle carrega, em vez de tela em branco.
+    -->
+    <style>
+      /* ESCALA BASE
+         O padrao do navegador e 16px. Baixar para 14px encolhe a interface
+         inteira de uma vez — todo `rem` do MUI acompanha — sem precisar
+         mexer em componente nenhum e sem `zoom`, que encolhe o body sem
+         expandir a viewport e deixa faixa branca no fim da pagina. */
+      html {
+        font-size: 14px;
+      }
+
+      body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        line-height: 1.5;
+        /* Inter foi desenhada com espacamento generoso para texto corrido.
+           Em interface, fechar 1% deixa os rotulos mais coesos. */
+        letter-spacing: -0.01em;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      /* Trechos de codigo, IDs e numeros tabulares */
+      code, pre, kbd, samp {
+        font-family: 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+
+      #app-loading-bar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 3px;
+        width: 0;
+        background: linear-gradient(90deg, #4E93FF, #6366f1);
+        z-index: 999999;
+        transition: width 0.25s ease, opacity 0.4s ease;
+        pointer-events: none;
+      }
+      #app-loading-spinner {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #fff;
+        z-index: 999998;
+        transition: opacity 0.3s ease;
+      }
+      @media (prefers-color-scheme: dark) {
+        #app-loading-spinner { background: #111b21; }
+      }
+      #app-loading-spinner .ring {
+        width: 44px;
+        height: 44px;
+        border: 3px solid rgba(78, 147, 255, 0.25);
+        border-top-color: #4E93FF;
+        border-radius: 50%;
+        animation: app-spin 0.8s linear infinite;
+      }
+      @keyframes app-spin { to { transform: rotate(360deg); } }
+    </style>
+  </head>
+  <body>
+    <noscript>Você precisa habilitar JavaScript para executar este app.</noscript>
+
+    <div id="app-loading-spinner"><div class="ring"></div></div>
+    <div id="app-loading-bar"></div>
+
+    <script>
+      (function () {
+        var bar = document.getElementById("app-loading-bar");
+        var spinner = document.getElementById("app-loading-spinner");
+        var width = 0;
+        var timer = null;
+        var done = false;
+
+        function removeEl(el) {
+          if (el && el.parentNode) el.parentNode.removeChild(el);
+        }
+
+        window.startProgress = function () {
+          if (!bar || timer) return;
+          timer = setInterval(function () {
+            // Avança devagar e nunca chega a 100% sozinha — só o
+            // finishProgress fecha, pra barra não "mentir" que terminou.
+            width = Math.min(width + Math.random() * 8, 90);
+            bar.style.width = width + "%";
+          }, 300);
+        };
+
+        window.finishProgress = function () {
+          if (done) return;
+          done = true;
+          if (timer) { clearInterval(timer); timer = null; }
+          if (bar) {
+            bar.style.width = "100%";
+            bar.style.opacity = "0";
+            setTimeout(function () { removeEl(bar); }, 400);
+          }
+          if (spinner) {
+            spinner.style.opacity = "0";
+            setTimeout(function () { removeEl(spinner); }, 300);
+          }
+        };
+
+        window.startProgress();
+
+        // Rede de segurança: se o app quebrar antes de chamar finishProgress,
+        // o overlay some sozinho — assim o erro real fica visível na tela em
+        // vez de ficar escondido atrás de um spinner eterno.
+        setTimeout(function () { window.finishProgress(); }, 20000);
+      })();
+    </script>
+
+    <div id="root"></div>
+  </body>
+</html>

@@ -1,0 +1,1186 @@
+/* Cloud White redesign for CampaignModal — paleta locked: #fafbfc / #e8ecf1 / #94a3b8 / #3b82f6
+   Tipografia: Sora (títulos) + Manrope (corpo). */
+
+/* ============================================================
+   CONTAINMENT — modal nunca estoura a viewport, rolagem interna
+   ============================================================ */
+
+/* Backdrop/container do MUI: centraliza e bloqueia overflow externo */
+.MuiDialog-root .MuiDialog-container {
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+}
+
+/* Paper do modal — limites duros baseados em vw/vh */
+.cm-v2-paper,
+.MuiDialog-paper.cm-v2-paper,
+.MuiDialog-paperScrollPaper.cm-v2-paper,
+.MuiDialog-paperScrollBody.cm-v2-paper {
+  border-radius: 20px !important;
+  background-color: #ffffff !important;
+  font-family: "Manrope", "Inter", system-ui, sans-serif !important;
+  border: 1px solid #e8ecf1 !important;
+  box-shadow: 0 25px 60px -20px rgba(15, 23, 42, 0.25) !important;
+
+  /* Dimensões responsivas com teto fixo */
+  width: min(1100px, calc(100vw - 32px)) !important;
+  max-width: min(1100px, calc(100vw - 32px)) !important;
+  height: calc(100vh - 32px) !important;
+  max-height: calc(100vh - 32px) !important;
+  margin: 16px !important;
+
+  /* Layout em coluna: header / tabs / conteúdo rolável / footer */
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;   /* o Paper nunca rola — só o content */
+  min-height: 0 !important;
+}
+
+/* Conteúdo é a ÚNICA área rolável — scrollbar sempre visível */
+.cm-v2-paper .MuiDialogContent-root {
+  flex: 1 1 auto !important;
+  overflow-y: scroll !important;
+  overflow-x: hidden !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
+}
+
+/* Header, abas e footer ficam fixos (não encolhem nem rolam) */
+.cm-v2-header,
+.cm-v2-tabbar,
+.cm-v2-paper .MuiDialogActions-root {
+  flex: 0 0 auto !important;
+  overflow: visible;
+}
+
+/* O Formik/Form precisa ocupar a altura restante para o DialogContent rolar */
+.cm-v2-paper form {
+  display: flex !important;
+  flex: 1 1 auto !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  position: relative !important; /* ancora o overlay de Revisão */
+}
+
+.cm-v2-paper form > div:not(.cm-v2-tabbar):not([hidden]) {
+  display: flex !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Telas menores: reduz paddings para sobrar mais área útil */
+@media (max-width: 1366px) {
+  .cm-v2-paper { margin: 12px !important; max-height: calc(100vh - 24px) !important; }
+  .cm-v2-paper .MuiDialogContent-root { padding: 18px 22px !important; }
+  .cm-v2-header { padding: 16px 22px 10px !important; }
+  .cm-v2-tabbar { padding: 0 14px !important; }
+  .cm-v2-paper .MuiDialogActions-root { padding: 10px 18px !important; }
+}
+
+@media (max-height: 760px) {
+  .cm-v2-paper { max-height: calc(100vh - 16px) !important; margin: 8px !important; }
+}
+
+/* ============================================================
+   ESCALA AUTOMÁTICA DE FONTE (clamp) — evita texto cortado/desalinhado
+   Base fluida entre telas de ~1280px e 1920px.
+   ============================================================ */
+.cm-v2-paper {
+  font-size: clamp(12px, 0.72vw + 6px, 14px) !important;
+  line-height: 1.5 !important;
+}
+.cm-v2-header-title {
+  font-size: clamp(18px, 1.05vw + 8px, 22px) !important;
+  line-height: 1.25 !important;
+}
+.cm-v2-header-sub {
+  font-size: clamp(12px, 0.4vw + 8px, 13px) !important;
+  line-height: 1.4 !important;
+}
+.cm-v2-tabs .MuiTab-root {
+  font-size: clamp(12px, 0.5vw + 7px, 14px) !important;
+  line-height: 1.4 !important;
+}
+.cm-v2-paper .MuiTypography-subtitle1 { font-size: clamp(14px, 0.6vw + 8px, 16px) !important; line-height: 1.4 !important; }
+.cm-v2-paper .MuiTypography-subtitle2 { font-size: clamp(13px, 0.5vw + 8px, 15px) !important; line-height: 1.4 !important; }
+.cm-v2-paper .MuiTypography-body1     { font-size: clamp(13px, 0.5vw + 7px, 14px) !important; line-height: 1.55 !important; }
+.cm-v2-paper .MuiTypography-body2     { font-size: clamp(12px, 0.45vw + 7px, 13px) !important; line-height: 1.5 !important; }
+.cm-v2-paper .MuiTypography-caption,
+.cm-v2-paper .MuiFormHelperText-root  { font-size: clamp(11px, 0.35vw + 7px, 12px) !important; line-height: 1.4 !important; }
+
+/* Inputs / labels acompanham a escala */
+.cm-v2-paper .MuiInputBase-input,
+.cm-v2-paper .MuiSelect-select,
+.cm-v2-paper .MuiOutlinedInput-input {
+  font-size: clamp(13px, 0.5vw + 7px, 14px) !important;
+  line-height: 1.5 !important;
+}
+.cm-v2-paper .MuiInputLabel-root {
+  font-size: clamp(12px, 0.45vw + 7px, 13px) !important;
+  line-height: 1.4 !important;
+}
+
+/* Botões e chips proporcionais */
+.cm-v2-paper .MuiButton-root { font-size: clamp(13px, 0.5vw + 7px, 14px) !important; line-height: 1.4 !important; }
+.cm-v2-paper .MuiChip-root   { font-size: clamp(10px, 0.3vw + 7px, 11px) !important; line-height: 1.3 !important; }
+
+/* Evita quebra estranha em rótulos de campos */
+.cm-v2-paper .MuiInputLabel-outlined { white-space: nowrap; }
+
+.cm-v2-paper * { font-family: "Manrope", "Inter", system-ui, sans-serif; }
+
+/* Header */
+.cm-v2-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 22px 32px 14px;
+  background: #ffffff;
+  border-bottom: 1px solid #e8ecf1;
+}
+.cm-v2-header-title {
+  font-family: "Sora", "Plus Jakarta Sans", sans-serif !important;
+  font-weight: 700;
+  font-size: 22px;
+  color: #0f172a;
+  margin: 0;
+  line-height: 1.2;
+}
+.cm-v2-header-sub {
+  font-size: 13px;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+.cm-v2-close-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #94a3b8;
+  padding: 6px;
+  border-radius: 8px;
+  display: inline-flex;
+  transition: background-color .15s ease, color .15s ease;
+}
+.cm-v2-close-btn:hover { background: #e8ecf1; color: #0f172a; }
+
+/* Tab bar — centralizada */
+.cm-v2-tabs .MuiTabs-root { min-height: 48px; }
+.cm-v2-tabs .MuiTabs-flexContainer {
+  justify-content: center !important;
+}
+.cm-v2-tabs .MuiTabs-indicator {
+  background-color: #3b82f6 !important;
+  height: 3px !important;
+  border-radius: 3px 3px 0 0;
+}
+.cm-v2-tabs .MuiTab-root {
+  text-transform: none !important;
+  font-family: "Sora", sans-serif !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  color: #94a3b8 !important;
+  min-height: 48px !important;
+  padding: 12px 24px !important;
+  letter-spacing: 0 !important;
+  text-align: center !important;
+  justify-content: center !important;
+}
+.cm-v2-tabs .MuiTab-wrapper { justify-content: center !important; align-items: center !important; }
+.cm-v2-tabs .Mui-selected { color: #3b82f6 !important; }
+.cm-v2-tabbar { background: #fafbfc; padding: 0 24px; border-bottom: 1px solid #e8ecf1; text-align: center; }
+
+/* DialogContent */
+.cm-v2-paper .MuiDialogContent-root {
+  background: #ffffff !important;
+  border-top: none !important;
+  border-bottom: none !important;
+  padding: 28px 32px !important;
+  max-height: none !important;
+}
+
+/* Inputs */
+.cm-v2-paper .MuiOutlinedInput-root {
+  border-radius: 12px !important;
+  background-color: #fafbfc !important;
+  transition: box-shadow .15s ease, border-color .15s ease;
+}
+.cm-v2-paper .MuiOutlinedInput-notchedOutline { border-color: #e8ecf1 !important; }
+.cm-v2-paper .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline { border-color: #cbd5e1 !important; }
+.cm-v2-paper .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: #3b82f6 !important;
+  border-width: 1.5px !important;
+}
+.cm-v2-paper .MuiOutlinedInput-root.Mui-focused {
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+}
+.cm-v2-paper .MuiInputLabel-outlined {
+  color: #94a3b8 !important;
+  font-weight: 500;
+}
+.cm-v2-paper .MuiInputLabel-outlined.Mui-focused { color: #3b82f6 !important; }
+.cm-v2-paper .MuiFormHelperText-root { color: #94a3b8; }
+
+/* Cards / boxes existentes */
+.cm-v2-paper .MuiCard-root,
+.cm-v2-paper .MuiPaper-rounded {
+  border-radius: 14px !important;
+}
+
+/* Switch primary */
+.cm-v2-paper .MuiSwitch-colorPrimary.Mui-checked { color: #3b82f6 !important; }
+.cm-v2-paper .MuiSwitch-colorPrimary.Mui-checked + .MuiSwitch-track { background-color: #3b82f6 !important; }
+
+/* Chips (variáveis) */
+.cm-v2-paper .MuiChip-root {
+  background: #e8ecf1 !important;
+  color: #475569 !important;
+  font-weight: 600 !important;
+  font-size: 11px !important;
+  letter-spacing: 0.3px;
+  border-radius: 6px !important;
+  height: 26px !important;
+  transition: background-color .15s ease, color .15s ease;
+}
+.cm-v2-paper .MuiChip-root:hover { background: #3b82f6 !important; color: #ffffff !important; }
+.cm-v2-paper .MuiChip-clickable:active { box-shadow: none; }
+
+/* Section labels (Typography variant=subtitle/caption) — leve refresh */
+.cm-v2-paper .MuiTypography-subtitle1,
+.cm-v2-paper .MuiTypography-subtitle2 {
+  font-family: "Sora", sans-serif !important;
+  font-weight: 600 !important;
+  color: #0f172a;
+}
+
+/* Footer / DialogActions */
+.cm-v2-paper .MuiDialogActions-root {
+  background: #fafbfc !important;
+  border-top: 1px solid #e8ecf1 !important;
+  padding: 16px 28px !important;
+  gap: 10px;
+}
+
+/* Buttons */
+.cm-v2-paper .MuiButton-root {
+  text-transform: none !important;
+  font-family: "Sora", sans-serif !important;
+  font-weight: 600 !important;
+  border-radius: 12px !important;
+  padding: 8px 20px !important;
+  letter-spacing: 0 !important;
+  box-shadow: none !important;
+}
+.cm-v2-paper .MuiButton-containedPrimary {
+  background-color: #3b82f6 !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 16px -8px rgba(59, 130, 246, 0.55) !important;
+}
+.cm-v2-paper .MuiButton-containedPrimary:hover { background-color: #2563eb !important; }
+.cm-v2-paper .MuiButton-outlinedPrimary {
+  border: 1px solid #e8ecf1 !important;
+  color: #475569 !important;
+  background: #ffffff !important;
+}
+.cm-v2-paper .MuiButton-outlinedPrimary:hover {
+  border-color: #cbd5e1 !important;
+  background: #fafbfc !important;
+}
+
+/* Tabela / lista (aba Listas) */
+.cm-v2-paper .MuiListItem-root {
+  border-radius: 10px;
+  margin-bottom: 4px;
+}
+
+/* Scrollbar custom dentro do dialog — sempre visível */
+.cm-v2-paper .MuiDialogContent-root {
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+.cm-v2-paper .MuiDialogContent-root::-webkit-scrollbar { width: 10px; height: 10px; }
+.cm-v2-paper .MuiDialogContent-root::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 8px; }
+.cm-v2-paper .MuiDialogContent-root::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; border: 2px solid #f1f5f9; }
+.cm-v2-paper .MuiDialogContent-root::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* Recurrence card (já existente no componente) reaplica paleta */
+.cm-v2-paper .MuiCard-root[class*="recurrenceCard"] {
+  background: #fafbfc !important;
+  border: 1px solid #e8ecf1 !important;
+}
+
+
+/* ============ REDESIGN v4: Section cards + cleaner layout ============ */
+
+/* DialogContent ganha um background suave para destacar os cards brancos */
+.cm-v2-paper .MuiDialogContent-root {
+  background: #f6f8fb !important;
+  padding: 20px 24px !important;
+}
+
+/* Espaçamento padrão entre os blocos top-level da aba Campanha */
+.cm-v2-paper .MuiDialogContent-root > .MuiGrid-container {
+  row-gap: 14px;
+}
+.cm-v2-paper .MuiDialogContent-root > .MuiGrid-container > .MuiGrid-item {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+/* --- Card wrapper para cada seção --- */
+.cm-v2-section-card {
+  background: #ffffff;
+  border: 1px solid #e8ecf1;
+  border-radius: 14px;
+  padding: 16px 18px 14px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.cm-v2-section-card:hover {
+  border-color: #dbe3ee;
+  box-shadow: 0 4px 14px -8px rgba(15, 23, 42, 0.10);
+}
+
+/* Section title — agora é o cabeçalho do card */
+.cm-v2-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 0;
+  font-family: "Sora", "Manrope", "Inter", sans-serif;
+  font-size: 11px !important;
+  font-weight: 700;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  color: #475569;
+}
+.cm-v2-section-title svg {
+  font-size: 16px;
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.10);
+  border-radius: 6px;
+  padding: 4px;
+  box-sizing: content-box;
+}
+.cm-v2-section-title::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, #e8ecf1 0%, transparent 100%);
+  margin-left: 4px;
+}
+
+/* Quando o section-title aparece "solto" (sem cm-v2-section-card),
+   desenha o card visualmente cobrindo este e os próximos siblings Grid item
+   até o próximo section-title. Truque: wrapper visual via background no
+   próprio Grid item que contém o título + alteração de spacing.  */
+.cm-v2-paper .MuiDialogContent-root > .MuiGrid-container > .MuiGrid-item:has(> .cm-v2-section-title) {
+  margin-top: 6px;
+}
+
+/* Cards mais limpos com leve sombra */
+.cm-v2-paper .MuiCard-root.MuiPaper-outlined {
+  border: 1px solid #e8ecf1 !important;
+  border-radius: 14px !important;
+  background: #ffffff !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03) !important;
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.cm-v2-paper .MuiCard-root.MuiPaper-outlined:hover {
+  border-color: #dbe3ee !important;
+  box-shadow: 0 4px 14px -8px rgba(15, 23, 42, 0.10) !important;
+}
+
+/* Chips de variáveis mais clicáveis */
+.cm-v2-paper .MuiChip-outlined {
+  border-color: #cfdcfb !important;
+  color: #2563eb !important;
+  background: #f3f7ff !important;
+  font-weight: 600 !important;
+  height: 28px !important;
+  border-radius: 8px !important;
+  padding: 0 2px !important;
+  transition: all .15s ease;
+}
+.cm-v2-paper .MuiChip-outlined:hover {
+  background: #3b82f6 !important;
+  color: #fff !important;
+  border-color: #3b82f6 !important;
+  transform: translateY(-1px);
+}
+
+/* Mock WhatsApp header polido */
+.cm-v2-wpp-header {
+  background: linear-gradient(135deg, #075E54 0%, #128C7E 100%) !important;
+}
+
+/* ===== Footer: botões sempre alinhados ===== */
+.cm-v2-paper .MuiDialogActions-root {
+  flex-wrap: nowrap !important;
+  justify-content: flex-end !important;
+  gap: 10px !important;
+  padding: 14px 24px !important;
+}
+.cm-v2-paper .MuiDialogActions-root > * {
+  margin: 0 !important;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* ===== Layout duas colunas dentro de cada section-card =====
+   Já é aplicado via Grid container md={4/4/4} no JSX, esta regra
+   apenas garante alinhamento vertical bonito. */
+.cm-v2-section-card .MuiGrid-container > .MuiGrid-item {
+  display: flex;
+  flex-direction: column;
+}
+.cm-v2-section-card .MuiFormControl-root,
+.cm-v2-section-card .MuiTextField-root {
+  width: 100%;
+}
+
+/* Responsivo: em telas menores, reduz padding do card */
+@media (max-width: 768px) {
+  .cm-v2-paper .MuiDialogContent-root { padding: 14px !important; }
+  .cm-v2-section-card { padding: 14px; }
+}
+
+
+/* ============================================================
+   REDESIGN v5 — Modern SaaS layout (header + stepper + cards)
+   ============================================================ */
+
+/* ---------- HEADER refinado com gradiente sutil ---------- */
+.cm-v2-header {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
+  padding: 20px 28px 16px !important;
+  position: relative;
+}
+.cm-v2-header::after {
+  content: "";
+  position: absolute;
+  left: 28px; right: 28px; bottom: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #e8ecf1 20%, #e8ecf1 80%, transparent);
+}
+.cm-v2-header-title {
+  display: flex !important;
+  align-items: center;
+  gap: 12px;
+}
+.cm-v2-header-title::before {
+  content: "";
+  display: inline-block;
+  width: 32px; height: 32px;
+  border-radius: 10px;
+  background:
+    radial-gradient(circle at 30% 30%, #60a5fa 0%, #3b82f6 60%, #2563eb 100%);
+  box-shadow: 0 6px 14px -4px rgba(59,130,246,.55), inset 0 -2px 4px rgba(0,0,0,.15);
+  flex-shrink: 0;
+}
+.cm-v2-header-sub { padding-left: 44px; margin-top: 2px !important; }
+
+/* ---------- STEP-BAR: transforma tabs em "wizard steps" ---------- */
+.cm-v2-tabbar.cm-v2-tabs {
+  background: #ffffff !important;
+  padding: 14px 28px !important;
+  border-bottom: 1px solid #eef1f5 !important;
+}
+.cm-v2-tabs .MuiTabs-flexContainer {
+  gap: 6px;
+  justify-content: flex-start !important;
+}
+.cm-v2-tabs .MuiTabs-indicator { display: none !important; }
+.cm-v2-tabs .MuiTab-root {
+  position: relative;
+  min-height: 40px !important;
+  padding: 8px 16px 8px 38px !important;
+  border-radius: 999px !important;
+  background: #f3f5f9 !important;
+  color: #64748b !important;
+  border: 1px solid transparent !important;
+  font-size: 13px !important;
+  transition: all .18s ease;
+  opacity: 1 !important;
+  overflow: visible !important;
+}
+.cm-v2-tabs .MuiTab-root::before {
+  content: counter(step);
+  counter-increment: step;
+  position: absolute;
+  left: 8px; top: 50%;
+  transform: translateY(-50%);
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Sora", sans-serif;
+  transition: all .18s ease;
+}
+.cm-v2-tabs .MuiTabs-flexContainer { counter-reset: step; }
+.cm-v2-tabs .MuiTab-root:hover {
+  background: #e8eef7 !important;
+  color: #334155 !important;
+}
+.cm-v2-tabs .Mui-selected {
+  background: linear-gradient(180deg, #ebf2ff 0%, #dde9ff 100%) !important;
+  color: #1d4ed8 !important;
+  border-color: #bfd4fb !important;
+  box-shadow: 0 1px 0 #ffffff inset, 0 2px 6px -2px rgba(37,99,235,.18);
+}
+.cm-v2-tabs .Mui-selected::before {
+  background: #3b82f6 !important;
+  border-color: #3b82f6 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 0 3px rgba(59,130,246,.15);
+}
+
+/* ---------- SECTION CARD com barra lateral de acento ---------- */
+.cm-v2-section-card {
+  position: relative;
+  padding: 18px 20px 16px 22px !important;
+  border-radius: 16px !important;
+  border-color: #eef1f5 !important;
+  box-shadow:
+    0 1px 2px rgba(15,23,42,.04),
+    0 1px 0 rgba(255,255,255,.6) inset !important;
+}
+.cm-v2-section-card::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 18px; bottom: 18px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(180deg, #3b82f6, #60a5fa);
+  opacity: 0;
+  transition: opacity .2s ease;
+}
+.cm-v2-section-card:hover::before { opacity: 1; }
+.cm-v2-section-card:focus-within::before { opacity: 1; }
+.cm-v2-section-card:focus-within {
+  border-color: #c7d8fb !important;
+  box-shadow:
+    0 0 0 4px rgba(59,130,246,.08),
+    0 4px 14px -8px rgba(15,23,42,.10) !important;
+}
+
+/* ---------- SECTION TITLE: ícone com gradiente ---------- */
+.cm-v2-section-title {
+  font-size: 12px !important;
+  letter-spacing: 1.4px !important;
+  color: #334155 !important;
+  margin-bottom: 14px !important;
+}
+.cm-v2-section-title svg {
+  background: linear-gradient(135deg, rgba(59,130,246,.15), rgba(96,165,250,.08)) !important;
+  color: #2563eb !important;
+  border: 1px solid rgba(59,130,246,.18);
+  width: 26px; height: 26px;
+  padding: 5px !important;
+  border-radius: 8px !important;
+}
+
+/* ---------- DialogContent: fundo mais cinza para destacar cards ---------- */
+.cm-v2-paper .MuiDialogContent-root {
+  background: #f4f6fa !important;
+  padding: 22px 26px !important;
+}
+.cm-v2-paper .MuiDialogContent-root > .MuiGrid-container { row-gap: 16px; }
+
+/* ---------- INPUTS mais "soft" ---------- */
+.cm-v2-paper .MuiOutlinedInput-root {
+  background-color: #ffffff !important;
+  border-radius: 10px !important;
+}
+.cm-v2-paper .MuiOutlinedInput-notchedOutline { border-color: #e2e8f0 !important; }
+
+/* ---------- FOOTER: separa secundárias da primária ---------- */
+.cm-v2-paper .MuiDialogActions-root {
+  background: #ffffff !important;
+  border-top: 1px solid #eef1f5 !important;
+  padding: 14px 26px !important;
+  position: relative;
+}
+.cm-v2-paper .MuiDialogActions-root::before {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; top: -8px;
+  height: 8px;
+  background: linear-gradient(180deg, transparent, rgba(15,23,42,.04));
+  pointer-events: none;
+}
+.cm-v2-paper .MuiButton-containedPrimary {
+  background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%) !important;
+  box-shadow: 0 6px 14px -6px rgba(37,99,235,.55), 0 1px 0 rgba(255,255,255,.25) inset !important;
+}
+.cm-v2-paper .MuiButton-containedPrimary:hover {
+  background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%) !important;
+}
+
+/* ---------- WhatsApp preview: borda + sombra mais polidas ---------- */
+.cm-v2-paper .MuiCard-root.MuiPaper-outlined {
+  border-radius: 16px !important;
+  overflow: hidden;
+}
+
+/* ---------- Aba escondida não deve quebrar layout ---------- */
+.cm-v2-paper form > div[hidden] { display: none !important; }
+
+@media (max-width: 900px) {
+  .cm-v2-tabs .MuiTab-root { font-size: 12px !important; padding: 6px 12px 6px 32px !important; }
+  .cm-v2-header { padding: 16px 18px 12px !important; }
+  .cm-v2-header-sub { padding-left: 0 !important; }
+  .cm-v2-header-title::before { display: none; }
+}
+
+/* ============================================================
+   REDESIGN v6 — Vertical Wizard Sidebar
+   ============================================================ */
+
+/* Wrapper que vira a área principal (form > este div) em duas colunas */
+.cm-v2-wizard-shell {
+  display: flex !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  background: #f4f6fa;
+}
+
+/* Coluna esquerda — barra de etapas vertical */
+.cm-v2-tabbar.cm-v2-sidesteps {
+  flex: 0 0 260px !important;
+  max-width: 260px !important;
+  width: 260px !important;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfcfe 100%) !important;
+  border-right: 1px solid #eef1f5 !important;
+  border-bottom: none !important;
+  padding: 22px 16px !important;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+}
+
+.cm-v2-sidesteps-head {
+  padding: 4px 10px 10px;
+  border-bottom: 1px dashed #eef1f5;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.cm-v2-sidesteps-eyebrow {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+.cm-v2-sidesteps-title {
+  font-family: "Sora", sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* Anula estilo do stepper horizontal v5 dentro do modo vertical */
+.cm-v2-sidesteps .MuiTabs-root { min-height: 0 !important; }
+.cm-v2-sidesteps .MuiTabs-flexContainer {
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 6px !important;
+}
+.cm-v2-sidesteps .MuiTabs-indicator { display: none !important; }
+
+.cm-v2-sidesteps .MuiTab-root {
+  text-align: left !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+  min-height: 0 !important;
+  max-width: none !important;
+  padding: 10px 12px !important;
+  border-radius: 12px !important;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  color: #475569 !important;
+  text-transform: none !important;
+  font-family: "Sora", sans-serif !important;
+  transition: background-color .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.cm-v2-sidesteps .MuiTab-root::before { content: none !important; } /* remove numero do v5 */
+.cm-v2-sidesteps .MuiTab-root:hover {
+  background: #f4f7fc !important;
+  color: #1e293b !important;
+}
+.cm-v2-sidesteps .Mui-selected {
+  background: linear-gradient(180deg, #eaf2ff 0%, #dde9ff 100%) !important;
+  border-color: #c4d8fb !important;
+  color: #1d4ed8 !important;
+  box-shadow: 0 1px 0 #ffffff inset, 0 4px 12px -8px rgba(37,99,235,.35);
+}
+.cm-v2-sidesteps .MuiTab-wrapper { align-items: stretch !important; }
+
+/* Item de etapa: número + título + descrição */
+.cm-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+.cm-step-num {
+  flex-shrink: 0;
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #64748b;
+  font-family: "Sora", sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .18s ease;
+}
+.cm-v2-sidesteps .Mui-selected .cm-step-num {
+  background: linear-gradient(180deg, #3b82f6, #2563eb) !important;
+  border-color: #2563eb !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 10px -4px rgba(37,99,235,.55);
+}
+.cm-step-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+}
+.cm-step-title {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.cm-step-desc {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 500;
+  line-height: 1.3;
+}
+.cm-v2-sidesteps .Mui-selected .cm-step-desc { color: #4570c4; }
+
+/* Coluna direita — conteúdo do passo atual */
+.cm-v2-wizard-content {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #f4f6fa;
+}
+
+/* Os 3 divs hidden de cada aba viram filhos do wizard-content.
+   Quando visíveis, eles devem ocupar todo o espaço e rolar internamente. */
+.cm-v2-wizard-content > div {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.cm-v2-wizard-content > div[hidden] { display: none !important; }
+.cm-v2-wizard-content .MuiDialogContent-root {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto !important;
+}
+
+/* Anula a regra antiga que aplicava flex em TODOS os divs do form */
+.cm-v2-paper form > div:not(.cm-v2-wizard-shell) {
+  display: block;
+}
+.cm-v2-paper form > .cm-v2-wizard-shell {
+  display: flex !important;
+}
+
+/* Responsivo: em telas estreitas vira topo horizontal scrollável */
+@media (max-width: 900px) {
+  .cm-v2-wizard-shell { flex-direction: column !important; }
+  .cm-v2-tabbar.cm-v2-sidesteps {
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    max-width: none !important;
+    border-right: none !important;
+    border-bottom: 1px solid #eef1f5 !important;
+    padding: 12px 14px !important;
+  }
+  .cm-v2-sidesteps-head { display: none; }
+  .cm-v2-sidesteps .MuiTabs-flexContainer {
+    flex-direction: row !important;
+    overflow-x: auto;
+    gap: 8px !important;
+  }
+  .cm-v2-sidesteps .MuiTab-root { min-width: 200px !important; }
+  .cm-step-desc { display: none; }
+}
+
+/* ============================================================
+   REDESIGN v7 — Check verde + Preview WhatsApp fixo + Footer
+   ============================================================ */
+
+/* --- Check verde nas etapas concluídas --- */
+.cm-v2-sidesteps .MuiTab-root.cm-step-done .cm-step-num {
+  background: linear-gradient(180deg, #22c55e, #16a34a) !important;
+  border-color: #16a34a !important;
+  color: #ffffff !important;
+  font-size: 14px !important;
+  box-shadow: 0 4px 10px -4px rgba(34,197,94,.55);
+}
+.cm-v2-sidesteps .MuiTab-root.cm-step-done .cm-step-title { color: #15803d; }
+.cm-v2-sidesteps .MuiTab-root.cm-step-done {
+  background: #f0fdf4 !important;
+  border-color: #bbf7d0 !important;
+}
+.cm-v2-sidesteps .MuiTab-root.cm-step-done:hover {
+  background: #dcfce7 !important;
+}
+
+/* --- Preview WhatsApp fixo (3ª coluna do wizard) --- */
+.cm-v2-wizard-preview {
+  flex: 0 0 320px;
+  max-width: 320px;
+  width: 320px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfcfe 100%);
+  border-left: 1px solid #eef1f5;
+  padding: 22px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+}
+.cm-v2-preview-eyebrow {
+  font-family: "Sora", sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  padding: 0 4px;
+}
+
+/* Moldura de celular */
+.cm-v2-phone {
+  background: #ece5dd;
+  border: 8px solid #1f2937;
+  border-radius: 22px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 380px;
+  box-shadow: 0 12px 28px -12px rgba(15,23,42,.35);
+}
+.cm-v2-phone-header {
+  background: linear-gradient(135deg, #075E54 0%, #128C7E 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+}
+.cm-v2-phone-avatar {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.25);
+  flex-shrink: 0;
+}
+.cm-v2-phone-contact { display: flex; flex-direction: column; line-height: 1.1; }
+.cm-v2-phone-name { font-size: 13px; font-weight: 600; }
+.cm-v2-phone-status { font-size: 10px; opacity: .85; }
+
+.cm-v2-phone-body {
+  flex: 1;
+  padding: 14px 12px;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(0,0,0,.03) 1px, transparent 1px),
+    radial-gradient(circle at 80% 60%, rgba(0,0,0,.03) 1px, transparent 1px),
+    #ece5dd;
+  background-size: 22px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+  overflow-y: auto;
+}
+.cm-v2-phone-daychip {
+  align-self: center;
+  background: rgba(255,255,255,.85);
+  color: #475569;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 6px;
+  padding: 2px 10px;
+  margin-bottom: 4px;
+}
+.cm-v2-phone-bubble {
+  background: #dcf8c6;
+  color: #0f172a;
+  font-size: 13px;
+  line-height: 1.45;
+  padding: 8px 10px 18px;
+  border-radius: 10px 10px 2px 10px;
+  max-width: 88%;
+  position: relative;
+  white-space: pre-wrap;
+  word-break: break-word;
+  box-shadow: 0 1px 1px rgba(0,0,0,.08);
+}
+.cm-v2-phone-time {
+  position: absolute;
+  right: 8px;
+  bottom: 4px;
+  font-size: 9px;
+  color: #6b7280;
+}
+
+/* Em telas estreitas o preview vai pra baixo */
+@media (max-width: 1100px) {
+  .cm-v2-wizard-preview {
+    flex: 0 0 auto;
+    width: 100%;
+    max-width: none;
+    border-left: none;
+    border-top: 1px solid #eef1f5;
+  }
+  .cm-v2-wizard-shell { flex-wrap: wrap; }
+}
+
+/* --- Footer: Cancelar/Fechar à esquerda, Salvar à direita --- */
+.cm-v2-paper .MuiDialogActions-root {
+  justify-content: flex-start !important;
+}
+.cm-v2-paper .MuiDialogActions-root .MuiButton-containedPrimary {
+  margin-left: auto !important;
+}
+
+/* ============================
+   Barra de progresso (1 → 6)
+   ============================ */
+.cm-stepbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 4px 18px;
+  margin-bottom: 8px;
+  border-bottom: 1px dashed #e6e8ed;
+  flex-wrap: wrap;
+}
+.cm-stepbar-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: 1px solid #e3e6ec;
+  border-radius: 999px;
+  padding: 6px 12px 6px 6px;
+  cursor: pointer;
+  color: #6b7280;
+  font: inherit;
+  transition: all .18s ease;
+}
+.cm-stepbar-item:hover:not(:disabled) { border-color: #b9d2ff; background: #f4f8ff; }
+.cm-stepbar-item.is-active {
+  border-color: #4e93ff;
+  background: #eef4ff;
+  color: #1f3a8a;
+  font-weight: 600;
+  box-shadow: 0 0 0 3px rgba(78,147,255,0.15);
+}
+.cm-stepbar-item.is-done { border-color: #bbf7d0; background: #f0fdf4; color: #15803d; }
+.cm-stepbar-item.is-done .cm-stepbar-num { background: #16a34a; color: #fff; }
+.cm-stepbar-item.is-active .cm-stepbar-num { background: #4e93ff; color: #fff; }
+.cm-stepbar-item.is-locked { opacity: .55; cursor: not-allowed; }
+.cm-stepbar-num {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  color: #4b5563;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+.cm-stepbar-label { font-size: 13px; }
+.cm-stepbar-sep {
+  flex: 1 1 14px;
+  min-width: 14px;
+  max-width: 40px;
+  height: 2px;
+  background: #e5e7eb;
+  border-radius: 2px;
+}
+.cm-stepbar-sep.is-done { background: #86efac; }
+@media (max-width: 720px) {
+  .cm-stepbar-label { display: none; }
+  .cm-stepbar-sep { max-width: 18px; }
+}
+
+/* ============================
+   Overlay de Revisão final
+   ============================ */
+.cm-review-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-end;
+  z-index: 50;
+  animation: cmReviewIn .18s ease-out;
+}
+@keyframes cmReviewIn { from { opacity: 0 } to { opacity: 1 } }
+.cm-review-panel {
+  width: min(560px, 100%);
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -12px 0 36px rgba(0,0,0,0.18);
+}
+.cm-review-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px 12px;
+  border-bottom: 1px solid #eef0f4;
+}
+.cm-review-eyebrow {
+  font-size: 11px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #4e93ff;
+  font-weight: 700;
+}
+.cm-review-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-top: 2px;
+}
+.cm-review-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 14px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.cm-review-row {
+  border: 1px solid #e6e8ed;
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: #fafbfc;
+}
+.cm-review-row-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.cm-review-row-num {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: #4e93ff;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.cm-review-row-title {
+  flex: 1;
+  font-weight: 600;
+  color: #0f172a;
+  font-size: 14px;
+}
+.cm-review-edit {
+  background: transparent;
+  border: 1px solid #4e93ff;
+  color: #4e93ff;
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.cm-review-edit:hover { background: #4e93ff; color: #fff; }
+.cm-review-row-items {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+}
+.cm-review-kv {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 8px;
+  font-size: 13px;
+}
+.cm-review-kv dt { color: #6b7280; }
+.cm-review-kv dd { margin: 0; color: #0f172a; word-break: break-word; }
+.cm-review-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid #eef0f4;
+  background: #fff;
+}
+@media (max-width: 600px) {
+  .cm-review-panel { width: 100%; }
+  .cm-review-kv { grid-template-columns: 1fr; }
+}
+
+/* Banner de erros por etapa */
+.cm-step-errors {
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  border-left: 4px solid #dc2626;
+  border-radius: 8px;
+  color: #991b1b;
+  font-size: 13px;
+  animation: cmShake .22s ease-out;
+}
+.cm-step-errors-title { font-weight: 700; margin-bottom: 6px; }
+.cm-step-errors ul { margin: 0; padding-left: 18px; }
+.cm-step-errors li { margin: 2px 0; }
+.cm-step-errors li strong {
+  font-weight: 600;
+  background: rgba(220,38,38,0.08);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 12px;
+  margin-right: 4px;
+}
+@keyframes cmShake {
+  0%   { transform: translateX(0); }
+  25%  { transform: translateX(-3px); }
+  75%  { transform: translateX(3px); }
+  100% { transform: translateX(0); }
+}

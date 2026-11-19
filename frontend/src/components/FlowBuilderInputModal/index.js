@@ -1,0 +1,347 @@
+import React, { useState, useEffect, useRef } from "react";
+import { makeStyles } from "@material-ui/core/styles";
+import green from "@material-ui/core/colors/green";
+import purple from "@material-ui/core/colors/purple";
+import Button from "@material-ui/core/Button";
+import TextField from "@material-ui/core/TextField";
+import Dialog from "@material-ui/core/Dialog";
+import DialogActions from "@material-ui/core/DialogActions";
+import DialogContent from "@material-ui/core/DialogContent";
+import DialogTitle from "@material-ui/core/DialogTitle";
+import CircularProgress from "@material-ui/core/CircularProgress";
+import { i18n } from "../../translate/i18n";
+import MessageVariablesPicker from "../MessageVariablesPicker";
+import {
+  Box,
+  Chip,
+  Divider,
+  IconButton,
+  Stack,
+  Tooltip,
+  Typography
+} from "@mui/material";
+import QuestionIcon from "@mui/icons-material/QuestionAnswer";
+import HelpIcon from "@mui/icons-material/Help";
+import InfoIcon from "@mui/icons-material/Info";
+
+const useStyles = makeStyles(theme => ({
+  root: {
+    display: "flex",
+    flexWrap: "wrap"
+  },
+  textField: {
+    marginRight: theme.spacing(1),
+    flex: 1
+  },
+  extraAttr: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center"
+  },
+  btnWrapper: {
+    position: "relative"
+  },
+  buttonProgress: {
+    color: green[500],
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    marginTop: -12,
+    marginLeft: -12
+  },
+  dialogTitle: {
+    backgroundColor: "#f8f8f8",
+    padding: theme.spacing(2),
+    "& h2": {
+      display: "flex",
+      alignItems: "center",
+      gap: theme.spacing(1),
+      "& svg": {
+        color: purple[500]
+      }
+    }
+  },
+  dialogContent: {
+    padding: theme.spacing(2, 3)
+  },
+  dialogActions: {
+    padding: theme.spacing(1, 3, 2)
+  },
+  chip: {
+    margin: theme.spacing(0.5),
+    backgroundColor: "rgba(156, 39, 176, 0.1)",
+    color: purple[500],
+    border: `1px solid ${purple[200]}`,
+    cursor: "pointer",
+    "&:hover": {
+      backgroundColor: "rgba(156, 39, 176, 0.2)",
+    }
+  },
+  infoBox: {
+    backgroundColor: "rgba(156, 39, 176, 0.05)",
+    borderRadius: theme.spacing(1),
+    padding: theme.spacing(1.5),
+    marginTop: theme.spacing(2),
+    border: `1px solid rgba(156, 39, 176, 0.1)`,
+    "& svg": {
+      color: purple[500]
+    }
+  },
+  actionButton: {
+    borderRadius: 8,
+    textTransform: "none",
+    padding: theme.spacing(1, 2),
+    fontWeight: 500
+  }
+}));
+
+const FlowBuilderInputModal = ({ open, onSave, onUpdate, data, close }) => {
+  const classes = useStyles();
+  const isMounted = useRef(true);
+  const [activeModal, setActiveModal] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [question, setQuestion] = useState("");
+  const [variableName, setVariableName] = useState("");
+  const questionInputRef = useRef(null);
+
+  const [labels, setLabels] = useState({
+    title: i18n.t("flowBuilderInput.addTitle"),
+    btn: i18n.t("flowBuilderInput.add")
+  });
+
+  const exampleVariables = [
+    { name: "nome", description: i18n.t("flowBuilderInput.exampleVars.nome") },
+    { name: "email", description: i18n.t("flowBuilderInput.exampleVars.email") },
+    { name: "telefone", description: i18n.t("flowBuilderInput.exampleVars.telefone") },
+    { name: "cidade", description: i18n.t("flowBuilderInput.exampleVars.cidade") }
+  ];
+
+  useEffect(() => {
+    if (open === "edit") {
+      setLabels({
+        title: i18n.t("flowBuilderInput.editTitle"),
+        btn: i18n.t("flowBuilderInput.saveChanges")
+      });
+      setQuestion(data.data.question || "");
+      setVariableName(data.data.variableName || "");
+      setActiveModal(true);
+    } else if (open === "create") {
+      setLabels({
+        title: i18n.t("flowBuilderInput.addTitle"),
+        btn: i18n.t("flowBuilderInput.add")
+      });
+      setQuestion("");
+      setVariableName("");
+      setActiveModal(true);
+    } else {
+      setActiveModal(false);
+    }
+  }, [open, data]);
+
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
+  const handleClose = () => {
+    close(null);
+    setActiveModal(false);
+    setLoading(false);
+  };
+
+  const handleSave = async () => {
+    setLoading(true);
+    
+    try {
+      if (open === "edit") {
+        handleClose();
+        onUpdate({
+          ...data,
+          data: { 
+            ...data.data,
+            question: question,
+            variableName: variableName
+          }
+        });
+      } else if (open === "create") {
+        handleClose();
+        onSave({
+          question: question,
+          variableName: variableName
+        });
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      if (isMounted.current) {
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleAddVariable = (value) => {
+    if (questionInputRef.current) {
+      const inputElement = questionInputRef.current.querySelector('textarea');
+      if (inputElement) {
+        const start = inputElement.selectionStart;
+        const end = inputElement.selectionEnd;
+        const newText = question.substring(0, start) + value + question.substring(end);
+        setQuestion(newText);
+        setTimeout(() => {
+          inputElement.focus();
+          inputElement.setSelectionRange(start + value.length, start + value.length);
+        }, 100);
+      }
+    } else {
+      setQuestion((prev) => (prev || "") + value);
+    }
+  };
+
+  const isFormValid = () => {
+    return question.trim() !== "" && variableName.trim() !== "";
+  };
+
+  return (
+    <div className={classes.root}>
+      <Dialog
+        open={activeModal}
+        onClose={handleClose}
+        fullWidth
+        maxWidth="sm"
+        scroll="paper"
+        TransitionProps={{
+          style: { 
+            transition: "all 225ms cubic-bezier(0.4, 0, 0.2, 1) 0ms",
+            transform: activeModal ? "none" : "translateY(-20px)",
+            opacity: activeModal ? 1 : 0
+          }
+        }}
+      >
+        <DialogTitle className={classes.dialogTitle}>
+          <Box display="flex" alignItems="center" gap={1}>
+            <QuestionIcon style={{ color: "#9c27b0" }} />
+            <Typography variant="h6">{labels.title}</Typography>
+          </Box>
+        </DialogTitle>
+        
+        <DialogContent className={classes.dialogContent} dividers>
+          <Stack spacing={3}>
+            <Box>
+              <Stack direction="row" alignItems="center" spacing={1} mb={1}>
+                <Typography variant="subtitle2">{i18n.t("flowBuilderInput.question")}</Typography>
+                <Tooltip title={i18n.t("flowBuilderInput.questionTooltip")}>
+                  <IconButton size="small">
+                    <HelpIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Stack>
+              
+              <MessageVariablesPicker
+                onClick={handleAddVariable}
+                disabled={false}
+              />
+              <div style={{ marginTop: 8 }} />
+              <TextField
+                label={i18n.t("flowBuilderInput.typeQuestion")}
+                multiline
+                rows={4}
+                name="question"
+                variant="outlined"
+                value={question}
+                onChange={e => setQuestion(e.target.value)}
+                className={classes.textField}
+                fullWidth
+                ref={questionInputRef}
+                placeholder={i18n.t("flowBuilderInput.questionPlaceholder")}
+              />
+              
+              <Box mt={1}>
+                <Typography variant="caption" color="textSecondary">
+                  {i18n.t("flowBuilderInput.flowVariables")}
+                </Typography>
+                <Box display="flex" flexWrap="wrap" mt={0.5}>
+                  {exampleVariables.map((variable) => (
+                    <Chip
+                      key={variable.name}
+                      label={variable.name}
+                      className={classes.chip}
+                      onClick={() => handleAddVariable(`\${${variable.name}}`)}
+                      size="small"
+                    />
+                  ))}
+                </Box>
+              </Box>
+            </Box>
+            
+            <Divider />
+            
+            <Box>
+              <Stack direction="row" alignItems="center" spacing={1} mb={1}>
+                <Typography variant="subtitle2">{i18n.t("flowBuilderInput.variableName")}</Typography>
+                <Tooltip title={i18n.t("flowBuilderInput.variableTooltip")}>
+                  <IconButton size="small">
+                    <HelpIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Stack>
+              
+              <TextField
+                label={i18n.t("flowBuilderInput.variableName")}
+                name="variableName"
+                variant="outlined"
+                value={variableName}
+                onChange={e => setVariableName(e.target.value)}
+                className={classes.textField}
+                fullWidth
+                placeholder={i18n.t("flowBuilderInput.variablePlaceholder")}
+                helperText={i18n.t("flowBuilderInput.variableHelper")}
+              />
+            </Box>
+            
+            <Box className={classes.infoBox}>
+              <Stack direction="row" spacing={1}>
+                <InfoIcon fontSize="small" />
+                <Box>
+                  <Typography variant="subtitle2">{i18n.t("flowBuilderInput.howItWorks")}</Typography>
+                  <Typography variant="body2">
+                    {i18n.t("flowBuilderInput.howItWorksDesc")}
+                  </Typography>
+                </Box>
+              </Stack>
+            </Box>
+          </Stack>
+        </DialogContent>
+        
+        <DialogActions className={classes.dialogActions}>
+          <Button 
+            onClick={handleClose} 
+            color="secondary" 
+            variant="outlined"
+            className={classes.actionButton}
+          >
+            {i18n.t("contactModal.buttons.cancel")}
+          </Button>
+          
+          <div className={classes.btnWrapper}>
+            <Button
+              type="submit"
+              color="primary"
+              variant="contained"
+              onClick={handleSave}
+              disabled={loading || !isFormValid()}
+              className={classes.actionButton}
+            >
+              {labels.btn}
+            </Button>
+            {loading && (
+              <CircularProgress size={24} className={classes.buttonProgress} />
+            )}
+          </div>
+        </DialogActions>
+      </Dialog>
+    </div>
+  );
+};
+
+export default FlowBuilderInputModal;
